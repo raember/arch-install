@@ -13,6 +13,8 @@ INSTALL_WIRELESS_SUPPORT=true
 INSTALL_WIRELESS_SUPPORT_DIALOG=true
 MODIFY_INITRAMFS=false
 
+source settings.sh
+
 main() {
     case $RESUME in
     0)
@@ -130,6 +132,7 @@ connect_to_internet() {
 update_system_clock() {
     print_section "Update the system clock"
     print_status "Enabling NTP synchronization"
+    print_status "Executing ${CODE}timedatectl set-ntp true${NOCODE}"
     if timedatectl set-ntp true &>/dev/null; then
         print_pos "NTP has been enabled"
         if [[ $REGION != "" && $CITY != "" ]] ; then
@@ -149,12 +152,10 @@ update_system_clock() {
 partition_disks() {
     print_section "Partition the disks"
     print_status "Listing all block devices..."
-    print_status_start
-    lsblk
-    print_status_end
+    print_cmd_visible_fail "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" "" "Failed"
     print_status "The following partitions are ${BOLD}required${NOBOLD} for a chosen device:"
     print_status " - One partition for the root directory ${CODE}/${NOCODE}"
-    if [ -d /sys/firmware/efi/efivars ] ; then
+    if ls /sys/firmware/efi/efivars &> /dev/null; then
         print_status " - an ${BOLD}EFI System Partition${NOBOLD}(fat32):"
         print_status "   ${LINK}https://wiki.archlinux.org/index.php/EFI_System_Partition${NOLINK}"
     fi
@@ -417,172 +418,6 @@ post_installation() {
     print_end
 }
 
-
-# Prepare formatting
-FBLACK="\033[30m"
-FRED="\033[31m"
-FGREEN="\033[32m"
-FBROWN="\033[33m"
-FBLUE="\033[34m"
-FMAGENTA="\033[35m"
-FCYAN="\033[36m"
-FWHITE="\033[37m"
-
-BBLACK="\033[40m"
-BRED="\033[41m"
-BGREEN="\033[42m"
-BBROWN="\033[43m"
-BBLUE="\033[44m"
-BMAGENTA="\033[45m"
-BCYAN="\033[46m"
-BWHITE="\033[47m"
-
-BOLD="\033[1m"
-BLINK="\033[5m"
-REVERSE="\033[7m"
-
-NOBOLD="\033[22m"
-NOBLINK="\033[25m"
-NOREVERSE="\033[27m"
-
-R="\033[0m"
-
-BPRIMARY=${BGREEN}
-FPRIMARY=${FGREEN}
-TITLE=${BPRIMARY}${FBLACK}
-NORM=$FWHITE
-VAR=$FPRIMARY
-POS=$FGREEN
-NEG=$FRED
-CODE=$BOLD
-NOCODE=$NOBOLD
-LINK=$FPRIMARY
-NOLINK=$R$NORM
-
-PREFIX="${TITLE} ${R} "
-
-print_part() {
-    len=${#1}
-    printf "${TITLE}    "
-    printf %${len}s
-    printf "    ${R}\n"
-    echo -e "${TITLE}    $1    ${R}"
-    printf "${TITLE}    "
-    printf %${len}s
-    printf "    ${R}\n\n"
-}
-print_section() {
-    echo -e "${TITLE}#${INDEX} $1  ${R}\n${PREFIX}"
-}
-print_status() {
-    echo -e "${PREFIX}${NORM}$1${R}"
-}
-print_pos() {
-    echo -e "${PREFIX}${NORM}${POS}$1${R}"
-}
-print_neg() {
-    echo -e "${PREFIX}${NORM}${NEG}!!! $1${R}"
-}
-print_fail() {
-    print_neg "$1"
-    print_end
-    exit 1;
-}
-print_sub() {
-    echo -e "${PREFIX}    ${NORM}-> $1${R}"
-}
-print_end() {
-    echo -e "${TITLE} ${R}${FPRIMARY}____${R}\n"
-}
-print_prompt() {
-    print_status "$1${R}"
-    printf "${PREFIX}$2${R}"
-    read answer
-}
-print_status_start() {
-    echo -e "${TITLE} ${R}${FPRIMARY}__${R}\n"
-}
-print_status_end() {
-    echo -e "${FPRIMARY}___${R}\n${TITLE} ${R}"
-}
-print_prompt_boolean() { # <prompt> <preference> <variable> <yes-status> <no-status>
-    choice="[y/N] "
-    [[ $2 == "Y" || $2 == "y" ]] && choice="[Y/n] "
-    while : ; do
-        print_prompt "$1" "$choice"
-        [[ $answer == "" ]] && answer=$2
-        case $answer in
-            [yY])
-                [[ $4 == "" ]] || print_status "$4"
-                eval $3=true
-                return
-                ;;
-            [nN])
-                [[ $5 == "" ]] || print_status "$5"
-                eval $3=false
-                return
-                ;;
-            *)
-                print_neg "Please write either ${CODE}y/Y${NOCODE} or ${CODE}n/N${NOCODE}!";;
-        esac
-    done
-}
-print_cmd_visible() { # <cmd> <pos-status> <neg-status> <pos-do> <neg-do>
-    print_status "Executing ${CODE}$1${NOCODE}"
-    print_status_start
-    if eval "$1"; then
-        print_status_end
-        [[ $2 != "" ]] && print_pos "$2"
-        [[ $4 != "" ]] && eval "$4"
-    else
-        print_status_end
-        [[ $3 != "" ]] && print_neg "$3"
-        [[ $5 != "" ]] && eval "$5"
-    fi
-}
-print_cmd_visible_fail() { # <cmd> <pos-status> <neg-status>
-    print_status "Executing ${CODE}$1${NOCODE}"
-    print_status_start
-    if eval "$1"; then
-        print_status_end
-        [[ $2 != "" ]] && print_pos "$2"
-    else
-        print_status_end
-        print_fail "$3"
-    fi
-}
-print_cmd() { # <cmd> <pos-status> <neg-status> <pos-do> <neg-do>
-    print_status "Executing ${CODE}$1${NOCODE}"
-    if eval "$1 &> /dev/null"; then
-        [[ $2 != "" ]] && print_pos "$2"
-        [[ $4 != "" ]] && eval "$4"
-    else
-        [[ $3 != "" ]] && print_neg "$3"
-        [[ $5 != "" ]] && eval "$5"
-    fi
-}
-print_cmd_fail() { # <cmd> <pos-status> <neg-status>
-    print_status "Executing ${CODE}$1${NOCODE}"
-    if eval "$1 &> /dev/null"; then
-        [[ $2 != "" ]] && print_pos "$2"
-    else
-        print_fail "$3"
-    fi
-}
-sub_shell() {
-    print_sub "Hit ${CODE}Enter${NOCODE} to exit the shell and return to the setup"
-    while : ; do
-        printf "$PREFIX$FPRIMARY\$$NORM "
-        read -e answer
-        [[ $answer == "" ]] && break
-        history -s "$answer"
-        print_status_start
-        eval "$answer"
-        print_status_end
-    done
-    history -w arch_hist
-}
-
 # Parse arguments
 help() {
 	echo -e "Usage:"
@@ -591,9 +426,9 @@ help() {
 	echo -e " -c\t\tResume script from inside chroot - equals '-r 11'"
 	echo -e " -h\t\tShow this help text"
 }
-history -r arch_hist
-set -o vim
-CMD=""
+
+source _format.sh
+
 RESUME=0
 while getopts "r:c" arg; do
 	case $arg in
