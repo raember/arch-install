@@ -4,16 +4,12 @@
 
 start="arch.sh"
 settings="settings.sh"
-files=(
-    "$start"
-    "arch_post.sh"
-    "_format.sh"
-    "$settings"
-)
-# wget() {
-#     echo "downloading $1"
-#     return;
-# }
+files=("$start" "arch_post.sh" "_format.sh" "$settings")
+wget() {
+    filename=$(echo "$1" | egrep -o "/[^/]+?$")
+    cp "..$filename" .
+    return;
+}
 echo "Downloading files..."
 for file in "${files[@]}"; do
     if !(wget "https://raw.githubusercontent.com/raember/arch-install/master/$file"); then
@@ -23,7 +19,7 @@ for file in "${files[@]}"; do
 done
 source _format.sh
 
-print_prompt_boolean "Do you want to edit the ${font_code}$setting${font_no_code} file?" "y" edit "Editing settings file" "Not editing"
+print_prompt_boolean "Do you want to edit the ${font_code}$settings${font_no_code} file?" "y" edit "Editing settings file" "Not editing"
 if [ "$edit" = true ] ; then
     vim "$settings"
 fi
