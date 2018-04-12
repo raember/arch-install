@@ -44,21 +44,21 @@ font_no_reverse="\033[27m"
 
 font_reset="\033[0m"
 
-bg_primary=${bg_green}
-fg_primary=${fg_green}
+bg_primary="${bg_green2}"
+fg_primary="${fg_green2}"
 if [ "$fancy" = true ] ; then
-    format_title=${bg_primary}${fg_black}
+    format_title="${bg_primary}${fg_black}"
 else
     format_title=""
 fi
-format_normal=$fg_white
-format_variable=$fg_yellow
-format_positive=$fg_green
-format_negative=$fg_red
-format_code=$font_bold
-format_no_code=$font_no_bold
-format_link=$fg_primary
-format_no_link=$font_reset$format_normal
+format_normal="$fg_white"
+format_variable="$fg_cyan2"
+format_positive="$fg_green"
+format_negative="$fg_red"
+format_code="$fg_black2"
+format_no_code="$format_normal"
+format_link="$fg_white2"
+format_no_link="$format_normal"
 
 if [ "$fancy" = true ] ; then
     format_prefix="${format_title} ${font_reset} "
@@ -90,6 +90,16 @@ print_section() {
 print_status() {
     echo -e "${format_prefix}${format_normal}$1${font_reset}"
 }
+print_status_start() {
+    if [ "$fancy" = true ] ; then
+        echo -e "${format_title} ${font_reset}${fg_primary}__${font_reset}\n"
+    fi
+}
+print_status_end() {
+    if [ "$fancy" = true ] ; then
+        echo -e "${fg_primary}___${font_reset}\n${format_title} ${font_reset}"
+    fi
+}
 print_pos() {
     echo -e "${format_prefix}${format_normal}${format_positive}$1${font_reset}"
 }
@@ -100,9 +110,6 @@ print_fail() {
     print_neg "$1"
     print_end
     exit 1;
-}
-print_sub() {
-    echo -e "${format_prefix}    ${format_normal}-> $1${font_reset}"
 }
 print_end() {
     if [ "$fancy" = true ] ; then
@@ -116,17 +123,7 @@ print_prompt() {
     printf "${format_prefix}$2${font_reset}"
     read answer
 }
-print_status_start() {
-    if [ "$fancy" = true ] ; then
-        echo -e "${format_title} ${font_reset}${fg_primary}__${font_reset}\n"
-    fi
-}
-print_status_end() {
-    if [ "$fancy" = true ] ; then
-        echo -e "${fg_primary}___${font_reset}\n${format_title} ${font_reset}"
-    fi
-}
-print_prompt_boolean() { # <prompt> <preference> <variable> <yes-status> <no-status>
+print_prompt_boolean() { # <prompt> <preference> <var>
     choice="[y/N] "
     [[ $2 == "Y" || $2 == "y" ]] && choice="[Y/n] "
     while : ; do
@@ -134,13 +131,11 @@ print_prompt_boolean() { # <prompt> <preference> <variable> <yes-status> <no-sta
         [[ $answer == "" ]] && answer=$2
         case $answer in
             [yY])
-                [[ $4 == "" ]] || print_status "$4"
-                eval $3=true
+                eval "$3=true"
                 return
                 ;;
             [nN])
-                [[ $5 == "" ]] || print_status "$5"
-                eval $3=false
+                eval "$3=false"
                 return
                 ;;
             *)
@@ -148,50 +143,34 @@ print_prompt_boolean() { # <prompt> <preference> <variable> <yes-status> <no-sta
         esac
     done
 }
-print_cmd_visible() { # <cmd> <pos-status> <neg-status> <pos-do> <neg-do>
+print_cmd() { # <cmd> <var>
     print_status "Executing ${format_code}$1${format_no_code}"
     print_status_start
     if eval "$1"; then
         print_status_end
-        [[ $2 != "" ]] && print_pos "$2"
-        [[ $4 != "" ]] && eval "$4"
+        eval "$2=true"
     else
         print_status_end
-        [[ $3 != "" ]] && print_neg "$3"
-        [[ $5 != "" ]] && eval "$5"
+        eval "$2=false"
     fi
 }
-print_cmd_visible_fail() { # <cmd> <pos-status> <neg-status>
-    print_status "Executing ${format_code}$1${format_no_code}"
-    print_status_start
-    if eval "$1"; then
-        print_status_end
-        [[ $2 != "" ]] && print_pos "$2"
-    else
-        print_status_end
-        print_fail "$3"
-    fi
-}
-print_cmd() { # <cmd> <pos-status> <neg-status> <pos-do> <neg-do>
+print_cmd_invisible() { # <cmd> <var>
     print_status "Executing ${format_code}$1${format_no_code}"
     if eval "$1 &> /dev/null"; then
-        [[ $2 != "" ]] && print_pos "$2"
-        [[ $4 != "" ]] && eval "$4"
+        eval "$2=true"
     else
-        [[ $3 != "" ]] && print_neg "$3"
-        [[ $5 != "" ]] && eval "$5"
+        eval "$2=false"
     fi
 }
-print_cmd_fail() { # <cmd> <pos-status> <neg-status>
-    print_status "Executing ${format_code}$1${format_no_code}"
-    if eval "$1 &> /dev/null"; then
-        [[ $2 != "" ]] && print_pos "$2"
+print_check_file() { # <path> <var>
+    if [ -d "$1" ]; then
+        eval "$2=true"
     else
-        print_fail "$3"
+        eval "$2=false"
     fi
 }
 sub_shell() {
-    print_sub "Hit ${format_code}Enter${format_no_code} to exit the shell and return to the setup"
+    print_status "    -> Hit ${format_code}Enter${format_no_code} to exit the shell and return to the setup"
     while : ; do
         printf "$format_prefix$fg_primary\$$format_normal "
         read -e answer
@@ -206,3 +185,6 @@ sub_shell() {
 history -r arch_hist
 set -o vi
 CMD=""
+display_next_entry() {
+    return
+}

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#sh -c "$(curl -fsSL https://raw.githubusercontent.com/raember/arch-install/master/install.sh)"
-
 start="arch.sh"
 settings="settings.sh"
 files=("$start" "arch_post.sh" "_format.sh" "$settings")
