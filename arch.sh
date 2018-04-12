@@ -1,19 +1,8 @@
 #!/bin/bash
 
-# Settings:
-
-KEYBOARD_LAYOUT="de_CH-latin1"
-ADDITIONAL_PACKAGES="base-devel git vim"
-FSTAB_METHOD="U"
-REGION="Europe"
-CITY="Zurich"
-LOCALE="de_CH"
-NEW_HOSTNAME="turing"
-INSTALL_WIRELESS_SUPPORT=true
-INSTALL_WIRELESS_SUPPORT_DIALOG=true
-MODIFY_INITRAMFS=false
-
 source settings.sh
+
+script_files=("arch.sh" "_format.sh" "settings.sh")
 
 main() {
     case $RESUME in
@@ -111,6 +100,27 @@ main() {
         [ "$post_prompt" = true ] && read
         ;&
     18)
+        print_part "Package-Installation & Constomization"
+        prepare
+        ((INDEX++))
+        [ "$post_prompt" = true ] && read
+        ;&
+    19)
+        aur_helper
+        ((INDEX++))
+        [ "$post_prompt" = true ] && read
+        ;&
+    20)
+        num_lock_activation
+        ((INDEX++))
+        [ "$post_prompt" = true ] && read
+        ;&
+    21)
+        install_packages
+        ((INDEX++))
+        [ "$post_prompt" = true ] && read
+        ;&
+    22)
         print_part "Post-Installation"
         post_installation
         ;;
@@ -153,21 +163,27 @@ verify_boot_mode() {
 # 2
 connect_to_internet() {
     print_section "Connect to the Internet"
-    print_status "Checking internet connectivity"
-    print_cmd "ping -q -c 1 $ping_address" success
-    if [ "$success" = true ] ; then
-        print_pos "Internet is up and running"
-    else
-        print_neg "No active internet connection found"
-        print_sub "Please stop the running dhcpcd service with ${format_code}systemctl stop dhcpcd@${format_no_code} and pressing ${format_code}Tab${format_no_code}."
-        print_sub "Proceed with ${font_bold}Network configuration${font_no_bold}:"
-        print_sub "${font_link}https://wiki.archlinux.org/index.php/Network_configuration#Device_driver${font_no_link}"
-        print_sub "for ${font_bold}wired${font_no_bold} devices or ${font_bold}Wireless network configuration${font_no_bold}:"
-        print_sub "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration${font_no_link}"
-        print_sub "for ${font_bold}wireless${font_no_bold} devices"
-        sub_shell
-    fi
+    make_sure_internet_is_connected
     print_end
+}
+make_sure_internet_is_connected() {
+    print_status "Checking internet connectivity"
+    while : ; do
+        print_cmd "ping -q -c 1 $ping_address" success
+        if [ "$success" = true ] ; then
+            print_pos "Internet is up and running"
+            break;
+        else
+            print_neg "No active internet connection found"
+            print_sub "Please stop the running dhcpcd service with ${format_code}systemctl stop dhcpcd@${format_no_code} and pressing ${format_code}Tab${format_no_code}."
+            print_sub "Proceed with ${font_bold}Network configuration${font_no_bold}:"
+            print_sub "${font_link}https://wiki.archlinux.org/index.php/Network_configuration#Device_driver${font_no_link}"
+            print_sub "for ${font_bold}wired${font_no_bold} devices or ${font_bold}Wireless network configuration${font_no_bold}:"
+            print_sub "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration${font_no_link}"
+            print_sub "for ${font_bold}wireless${font_no_bold} devices"
+            sub_shell
+        fi
+    done
 }
 
 # 3
@@ -177,9 +193,9 @@ update_system_clock() {
     print_cmd_invisible "timedatectl set-ntp true" success
     if [ "$success" = true ] ; then
         print_pos "NTP has been enabled"
-        if [[ $REGION != "" && $CITY != "" ]] ; then
+        if [[ $region != "" && $city != "" ]] ; then
             print_status "Setting timezone based on locale settings"
-            print_cmd_invisible "timedatectl set-timezone $REGION/$CITY" success
+            print_cmd_invisible "timedatectl set-timezone $region/$city" success
             if [ "$success" = true ] ; then
                 print_pos "Set the timezone successfully"
             else
@@ -227,6 +243,9 @@ partition_disks() {
 # 5
 format_partitions() {
     print_section "Format the partitions"
+    print_status "Listing all block devices..."
+    print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
+    [ "$success" = false ] && print_fail "Something went horribly wrong"
     print_status "Format the partitions with the desired file systems. Example:"
     print_status "${format_code}mkfs.ext4 /dev/sdXN${format_no_code}"
     print_status "If you prepared a swap partition, enable it:"
@@ -239,6 +258,9 @@ format_partitions() {
 # 6
 mount_file_systems() {
     print_section "Mount the file systems"
+    print_status "Listing all block devices..."
+    print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
+    [ "$success" = false ] && print_fail "Something went horribly wrong"
     print_status "Mount the root partition of the new system to ${format_code}/mnt${format_no_code}:"
     print_status "${format_code}mount /dev/sdXN /mnt${format_no_code}"
     print_status "Create mount points for any remaining partitions and mount them accordingly: "
@@ -251,12 +273,16 @@ mount_file_systems() {
 # 7
 select_mirrors() {
     print_section "Select the mirrors"
-    print_status "If desired, mirrors can be manually sorted or enabled/disabled."
     if [ "$edit_mirrorlist" = "" ] ; then
         print_prompt_boolean "Do you want to edit the mirrorlist?" "y" edit_mirrorlist
     fi
     if [ "$edit_mirrorlist" = true ] ; then
-        print_cmd_visible_fail "vim /etc/pacman.d/mirrorlist" "Finished editing mirrorlist" "Failed editing mirrorlist"
+        print_cmd "vim /etc/pacman.d/mirrorlist" success
+        if [ "$success" = true ] ; then
+            print_pos  "Finished editing mirrorlist"
+        else
+            print_fail "Failed editing mirrorlist"
+        fi
     fi
     print_end
 }
@@ -265,7 +291,6 @@ select_mirrors() {
 install_base_packages() {
     print_section "Install the base packages"
     print_status "Installing the ${format_code}base${format_no_code} package group to the the new system."
-    packages=$additional_packages
     if [[ $additional_packages == "" ]] ; then
         print_prompt "List additional packages to be installed(like ${format_code}base-devel${format_no_code}, ${format_code}git${format_no_code} etc.)." "> "
         additional_packages=$answer
@@ -283,35 +308,47 @@ install_base_packages() {
 fstab() {
     print_section "Fstab"
     print_status "Generating fstab file for the new system."
-    method=$FSTAB_METHOD
-    if [[ $method == "" ]] ; then
-        while : ; do
+    while : ; do
+        if [ $fstab_identifier == "" ] ; then
             print_prompt "Do you want to use UUIDs(u/U) or labels(l/L)?" "[U/l] "
-            method=$answer
-            [[ $method == "" ]] && method="u"
-            case $method in
-                [uU])
-                    print_status "Using UUIDs to generate the fstab file..."
-                    method="U"
-                    break;;
-                [lL])
-                    print_status "Using labels to generate the fstab file..."
-                    method="L"
-                    break;;
-                *)
-                    print_neg "Please write either ${format_code}u/U${format_no_code}${format_negative} or ${format_code}l/L${format_no_code}${format_negative}!";;
-            esac
-        done
+            fstab_identifier=$answer
+        fi
+        [[ $fstab_identifier == "" ]] && fstab_identifier="u"
+        case $fstab_identifier in
+            [uU])
+                print_status "Using UUIDs to generate the fstab file..."
+                fstab_identifier="U"
+                break;;
+            [lL])
+                print_status "Using labels to generate the fstab file..."
+                fstab_identifier="L"
+                break;;
+            *)
+                print_neg "Please write either ${format_code}u/U${format_no_code}${format_negative} or ${format_code}l/L${format_no_code}${format_negative}!";;
+        esac
+    done
+    [ "$fstab_file" = "" ] && fstab_file="/mnt/etc/fstab"
+    print_cmd_invisible "genfstab -$fstab_identifier /mnt >> '$fstab_file'" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished writing to the fstab file"
+    else
+        print_fail "Failed writing to the fstab file"
     fi
-    print_cmd_visible_fail "genfstab -$method /mnt >> /mnt/etc/fstab" "Finished writing to the fstab file" "Failed writing to the fstab file"
     print_end
 }
 
 # 10
 chroot() {
     print_section "Chroot"
-    print_status "Change root into the new system and resume this script with ${format_code}./$(basename $0) -c${format_no_code}"
-    print_sub "${format_code}arch-chroot /mnt${format_no_code}"
+    print_status "Change root into the new system, cd into ${format_code}/root${format_no_code} and resume this script with ${format_code}./$(basename $0) -c${format_no_code}"
+    [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
+    if [ "$copy_scripts_to_new_system" = true ] ; then
+        for file in "${script_files[@]}"; do
+            print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
+            [ "$success" != true ] && print_fail "Couldn't copy file $file"
+        done
+    fi
+    print_status "    -> ${format_code}arch-chroot /mnt${format_no_code}"
     print_end
     exit 0
 }
@@ -319,107 +356,162 @@ chroot() {
 # 11
 time_zone() {
     print_section "Time zone"
-    region=$REGION
     if [[ $region == "" ]] ; then
         print_status "Choose from the following regions:"
-        print_status_start
-        ls /usr/share/zoneinfo/ -lA | grep ^d | cut -d" " -f12
-        print_status_end
+        print_cmd "ls /usr/share/zoneinfo/ -lA | grep ^d | cut -d' ' -f12" success
+        [ "$success" != true ] && print_fail "Something went horribly wrong"
         while : ; do
             print_prompt "Please choose a region" "> "
             region=$answer
-            [ -d /usr/share/zoneinfo/$region ] && break
+            print_check_file "/usr/share/zoneinfo/$region" success
+            [ "$success" = true ] && break
             print_neg "Please choose a region"
         done
     fi
-    city=$CITY
     if [[ $city == "" ]] ; then
         print_status "Choose from the following cities:"
-        print_status_start
-        ls /usr/share/zoneinfo/$region/ -mA
-        print_status_end
+        print_cmd "ls /usr/share/zoneinfo/$region/ -mA" success
+        [ "$success" != true ] && print_fail "Something went horribly wrong"
         while : ; do
             print_prompt "Please choose a city" "> "
             city=$answer
-            ls /usr/share/zoneinfo/$region/$city &> /dev/null && break
+            print_check_file "/usr/share/zoneinfo/$region/$city" success
+            [ "$success" = true ] && break
             print_neg "Please choose a city"
         done
     fi
     print_status "Setting up the symbolic link"
-    print_cmd_visible_fail "ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime" "Finished setting up the symbolic link" "Failed setting up the symbolic link"
+    print_cmd_invisible "ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished setting up the symbolic link"
+    else
+        print_fail "Failed setting up the symbolic link"
+    fi
     print_status "Generating ${format_code}/etc/adjtime${format_no_code}"
-    print_cmd_visible_fail "hwclock --systohc" "Finished generating ${format_code}/etc/adjtime${format_no_code}" "Failed generating ${format_code}/etc/adjtime${format_no_code}"
+    print_cmd "hwclock --systohc" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished generating ${format_code}/etc/adjtime${format_no_code}"
+    else
+        print_fail "Failed generating ${format_code}/etc/adjtime${format_no_code}"
+    fi
     print_end
 }
-
+function join_by { local IFS="$1"; shift; echo "$*"; }
 # 12
 locale() {
     print_section "Locale"
-    print_status "Uncomment needed localizations"
-    print_prompt "Opening ${format_code}/etc/locale.gen${format_no_code} with vim" ""
-    print_cmd_visible_fail "vim /etc/locale.gen" "Finished editing locale.gen" "Failed editing locale.gen"
+    if [ "$locales" = "" ] ; then
+        print_status "Uncomment needed localizations"
+        print_prompt "Opening ${format_code}/etc/locale.gen${format_no_code} with vim" ""
+        print_cmd "vim /etc/locale.gen" success
+        if [ "$success" = true ] ; then
+            print_pos "Finished editing locale.gen"
+        else
+            print_fail "Failed editing locale.gen"
+        fi
+    else
+        file="/etc/locale.gen"
+        [ "$test" = true ] && file="/dev/null"
+        locales_list=$(printf "\n%s" "${locales[@]}")
+        print_cmd_invisible "echo '$locales_list'" success
+        if [ "$success" = true ] ; then
+            print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
+        else
+            print_fail "Failed writing the locales"
+        fi
+    fi
     print_status "Generating localizations"
-    print_cmd_visible_fail "locale-gen" "Finished generating localizations" "Failed generating localizations"
-    locale=$LOCALE
-    if [[ $locale == "" ]] ; then
-        print_status "The following localizations are available:"
-        locales=$(grep "^[^#]" /etc/locale.gen)
-        print_status_start
-        echo $locales
-        print_status_end
-        while : ; do
-            print_prompt "Please choose to which one the ${format_code}LANG${format_no_code}${format_normal}-variable should be set:" "> "
-            locale=$answer
-            locale=$(echo $locales | grep $locale)
-            if [[ $locale != "" ]] ; then
-                break
-            fi
-            print_neg "Please choose a valid localization"
-        done
+    print_cmd "locale-gen" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished generating localizations"
+    else
+        print_fail "Failed generating localizations"
     fi
-    print_status "Setting ${format_code}LANG${format_no_code}-variable"
-    print_cmd_visible_fail "echo 'LANG=$locale' > /etc/locale.conf" "Finished setting ${format_code}LANG${format_no_code}${format_positive}-variable" "Failed setting ${format_code}LANG${format_no_code}${format_negative}-variable"
+    print_status "Setting ${format_code}LANG${format_no_code}-variable to ${format_variable}$lang"
+    file="/etc/locale.conf"
+    [ "$test" = true ] && file="/dev/null"
+    print_cmd_invisible "echo 'LANG=$lang' > $file" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished setting ${format_code}LANG${format_no_code}${format_positive}-variable"
+    else
+        print_fail "Failed setting ${format_code}LANG${format_no_code}${format_negative}-variable"
+    fi
     print_status "Setting keyboard layout for the new system"
-    kbl=$KEYBOARD_LAYOUT
-    [[ $kbl == "" ]] && kbl=$(cat "$(basename $0).kbl_tmp" 2> /dev/null)
-    if [[ $kbl == "" ]] ; then
-        print_neg "Couldn't recover previously set keyboard layout"
+    if [ "$keyboard_layout" = "" ] ; then
         print_prompt "Please set the desired keyboard layout:" "> "
-        kbl=$answer
+        keyboard_layout=$answer
     fi
-    print_cmd_visible_fail "echo 'KEYMAP=$kbl' > /etc/vconsole.conf" "Finished setting keyboard layout for the new system" "Failed setting keyboard layout for the new system"
+    file="/etc/vconsole.conf"
+    [ "$test" = true ] && file="/dev/null"
+    print_cmd_invisible "echo 'KEYMAP=$keyboard_layout' > $file" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished setting keyboard layout for the new system"
+    else
+        print_fail "Failed setting keyboard layout for the new system"
+    fi
     print_end
 }
 
 # 13
 hostname() {
     print_section "Hostname"
-    hostname=$NEW_HOSTNAME
-    if [[ $hostname == "" ]] ; then
+    if [ $hostname = "" ] ; then
         print_prompt "Set the desired hostname for the new system" "> "
         hostname=$answer
     fi
-    print_cmd_visible_fail "echo '$hostname' > /etc/hostname" "Finished setting the hostname" "Failed setting the hostname"
+    file="/etc/hostname"
+    [ "$test" = true ] && file="/dev/null"
+    print_cmd_invisible "echo '$hostname' > $file" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished setting the hostname"
+    else
+        print_fail "Failed setting the hostname"
+    fi
     print_status "Setting up hosts file"
-    print_cmd_visible_fail "echo -e '127.0.0.1	localhost\n::1		localhost\n127.0.1.1	$hostname.localdomain	$hostname' >> /etc/hosts" "Finished setting up hosts file" "Failed setting up hosts file"
+    file="/etc/hosts"
+    [ "$test" = true ] && file="/dev/null"
+    print_cmd_invisible "echo -e '127.0.0.1	localhost\n::1		localhost\n127.0.1.1	$hostname.localdomain	$hostname' >> $file" success
+    if [ "$success" = true ] ; then
+        print_pos "Finished setting up hosts file"
+    else
+        print_fail "Failed setting up hosts file"
+    fi
     print_end
 }
 
 # 14
 network_configuration() {
     print_section "Network Configuration"
-    iws=$INSTALL_WIRELESS_SUPPORT
-    [[ $iws == "" ]] && print_prompt_boolean "Should packages for wireless support be installed?" "n" iws "Installing wireless support packages" "Skipping wireless support packages"
-    if [ "$iws" = true ] ; then
-        print_cmd_visible_fail "pacman -S iw wpa_supplicant" "Finished installing wireless support packages" "Failed installing wireless support packages"
-        iwsd=$INSTALL_WIRELESS_SUPPORT_DIALOG
-        if [[ $iwsd == "" ]] ; then
-            print_prompt_boolean "Should the optional package ${format_code}dialog${format_no_code} for ${format_code}wifi-menu${format_no_code} be installed?" "n" iwsd "Installing ${format_code}dialog${format_no_code}" "Skipping ${format_code}dialog${format_no_code} installation"
-            [ "$iwsd" = true ] && print_cmd_visible_fail "pacman -S dialog" "Finished installing ${format_code}dialog${format_no_code}" "Failed installing ${format_code}dialog${format_no_code}"
-        fi
-        print_status "Please install needed ${format_code}firmware packages${format_no_code}:"
-        print_status "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration#Installing_driver.2Ffirmware${font_no_link}"
+    [ "$prompt_to_manage_manually" = "" ] && prompt_to_manage_manually=true
+    if [ "$prompt_to_manage_manually" = true ] ; then
+        print_status "Listing network interfaces..."
+        print_cmd "ip link" success
+        [ "$success" = false ] && print_fail "Failed listing network interfaces"
+        print_status "Please setup the network configuration by yourself"
         sub_shell
+    fi
+    if [ "$platform" = "laptop" ] ; then
+        [[ $wireless_support == "" ]] && print_prompt_boolean "Should packages for wireless support be installed?" "n" wireless_support
+        if [ "$wireless_support" = true ] ; then
+            print_cmd "pacman -S --color=always iw wpa_supplicant" success
+            if [ "$success" = true ] ; then
+                print_pos "Finished installing wireless support packages"
+            else
+                print_fail "Failed installing wireless support packages"
+            fi
+            [ "$dialog" = "" ] && print_prompt_boolean "Should the optional package ${format_code}dialog${format_no_code} for ${format_code}wifi-menu${format_no_code} be installed?" "n" dialog
+            if [ "$dialog" = true ] ; then
+                print_cmd "pacman -S --color=always dialog" success
+                if [ "$success" = true ] ; then
+                    print_pos "Finished installing ${format_code}dialog${format_no_code}"
+                else
+                    print_fail "Failed installing ${format_code}dialog${format_no_code}"
+                fi
+            fi
+            print_status "Please install needed ${format_code}firmware packages${format_no_code}:"
+            print_status "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration#Installing_driver.2Ffirmware${font_no_link}"
+            sub_shell
+        fi
     fi
     print_end
 }
@@ -427,14 +519,31 @@ network_configuration() {
 # 15
 initramfs() {
     print_section "Initramfs"
-    modinitramfs=$MODIFY_INITRAMFS
-    [[ $modinitramfs == "" ]] && print_prompt_boolean "Do you want to edit the ${format_code}mkinitpcio.conf${format_no_code} file?" "y" modinitramfs "Editing the ${format_code}mkinitpcio.conf${format_no_code} file" "Skipping the ${format_code}mkinitpcio.conf${format_no_code} file"
-    if [ "$modinitramfs" = true ] ; then
-        print_cmd_visible_fail "vim /etc/mkinitpcio.conf" "Finished editing ${format_code}mkinitpcio.conf${format_no_code}" "Failed editing ${format_code}mkinitpcio.conf${format_no_code}"
-        print_prompt_boolean "Do you want to rebuild the initramfs?" "y" rebuildinitramfs "Rebuilding initramfs" "Skipping the rebuilding of initramfs"
-        [ "$rebuildinitramfs" = true ] && print_cmd_visible_fail "mkinitcpio -p linux" "Finished rebuilding initramfs" "Failed rebuilding initramfs"
+    [ "$modify_initramfs" = "" ] && print_prompt_boolean "Do you want to edit the ${format_code}mkinitpcio.conf${format_no_code} file?" "y" modify_initramfs
+    if [ "$modify_initramfs" = true ] ; then
+        print_status "Editing the ${format_code}mkinitpcio.conf${format_no_code} file"
+        file="/etc/mkinitpcio.conf"
+        [ "$test" = true ] && file="/dev/null"
+        print_cmd "vim /etc/mkinitpcio.conf" success
+        if [ "$success" = true ] ; then
+            print_pos "Finished editing ${format_code}mkinitpcio.conf${format_no_code}"
+        else
+            print_fail "Failed editing ${format_code}mkinitpcio.conf${format_no_code}"
+        fi
+        print_prompt_boolean "Do you want to rebuild the initramfs?" "y" rebuildinitramfs
+        if [ "$rebuildinitramfs" = true ] ; then
+            print_status "Rebuilding initramfs"
+            print_cmd "mkinitcpio -p linux" success
+            if [ "$success" = true ] ; then
+                print_pos "Finished rebuilding initramfs"
+            else
+                print_fail "Failed rebuilding initramfs"
+            fi
+        else
+            print_status "Skipping the rebuilding of initramfs"
+        fi
     else
-        print_status "Nothing to do"
+        print_status "Skipping the ${format_code}mkinitpcio.conf${format_no_code} file"
     fi
     print_end
 }
@@ -443,13 +552,17 @@ initramfs() {
 root_password() {
     print_section "Root password"
     print_status "It's time to set the root password and add users and groups. Commands:"
-    print_status "- ${format_code}passwd [user]${format_no_code}                           Change password"
-    print_status "- ${format_code}useradd <name> -G {group1,...,groupN}${format_no_code}   Add user"
+    print_status "- ${format_code}passwd [user]${format_no_code}"
+    print_status "- ${format_code}useradd <name> -G {group1,...,groupN} -d <home_dir> -s <shell>${format_no_code}"
     print_status "Don't forget to make sure the user has a home directory"
-    print_status "Also edit the ${format_code}/etc/sudoers${format_no_code} file(with ${format_code}visudo${format_no_code}) to "
     sub_shell
-    print_prompt "Edit the ${format_code}/etc/sudoers${format_no_code} file to allow users in the group ${format_code}wheel${format_no_code} to execute ${format_code}sudo${format_no_code}" ""
-    print_cmd_visible_fail "visudo" "Edited the ${format_code}/etc/sudoers${format_no_code} file" "Failed to edit the ${format_code}/etc/sudoers${format_no_code} file"
+    print_prompt "Edit the ${format_code}/etc/sudoers${format_no_code} file to allow users in the group ${format_code}wheel${format_no_code} to execute ${format_code}sudo${format_no_code}"
+    print_cmd "visudo" success
+    if [ "$success" = true ] ; then
+        print_pos "Edited the ${format_code}/etc/sudoers${format_no_code} file"
+    else
+        print_fail "Failed to edit the ${format_code}/etc/sudoers${format_no_code} file"
+    fi
     print_end
 }
 
@@ -460,10 +573,16 @@ boot_loader() {
     print_status "${font_link}https://wiki.archlinux.org/index.php/Category:Boot_loaders${font_no_link}"
     sub_shell
     print_status "Checking cpu..."
-    if grep "Intel" /proc/cpuinfo &> /dev/null; then
+    print_cmd_invisible "grep 'Intel' /proc/cpuinfo &> /dev/null" success
+    if [ "$success" = true ] ; then
         print_status "Intel CPU detected"
-        print_sub "Installing ${format_code}intel-ucode${format_no_code}"
-        print_cmd_visible_fail "pacman -S intel-ucode" "Installation succeeded" "Installation failed"
+        print_status "Installing ${format_code}intel-ucode${format_no_code}"
+        print_cmd "pacman -S --color=always intel-ucode" success
+        if [ "$success" = true ] ; then
+            print_pos "Installation succeeded"
+        else
+            print_fail "Installation failed"
+        fi
         print_status "Please enable microcode updates manually according to the Wiki:"
         print_status "${font_link}https://wiki.archlinux.org/index.php/Microcode#Enabling_Intel_microcode_updates${font_no_link}"
         sub_shell
@@ -471,7 +590,114 @@ boot_loader() {
     print_end
 }
 
+
 # 18
+prepare() {
+    print_section "Preparation"
+    if [ $PWD = $home ] ; then
+        print_status "Copying script files to new location"
+        for file in "${script_files[@]}"; do
+            print_cmd_invisible "cp './$file' '$home/$file'" success
+            [ "$success" != true ] && print_fail "Couldn't copy file $file"
+        done
+        print_status "Changing directory to new location"
+        print_cmd_invisible "cd $home" success
+        print_status "Substitue root to new user"
+        print_status "Now start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
+        print_cmd "su $username" success
+        print_end
+        exit 1;
+    fi
+    print_status "Making sure all the necessary directories are present"
+    for dir in "${directories[@]}"; do
+        print_cmd_invisible "mkdir -p $dir" success
+        [ "$success" = false ] && print_fail "Failed creating $dir"
+    done
+    print_status "Making sure all the necessary programs are installed"
+    programs=("git" "vim")
+    for program in "${programs[@]}"; do
+        print_cmd_invisible "$program --version" success
+        if [ "$success" = false ] ; then
+            print_status "${format_code}$program${format_no_code} was missing. Installing now..."
+            print_cmd "pacman -S --color=always $program" success
+            [ "$success" = false ] && print_fail "Couldn't install $program"
+        fi
+    done
+    print_status "Checking internet connectivity"
+    make_sure_internet_is_connected
+    print_prompt_boolean "Do you want to enable ${CODE}multilib${NOCODE}?" "y" multilib
+    if [ "$multilib" = true ] ; then
+        print_cmd "sudo vim /etc/pacman.conf" success
+        [ "$success" = false ] && print_fail "Failed"
+    fi
+    print_cmd "sudo pacman -Syu --color=always" success
+    [ "$success" = false ] && print_fail "Failed"
+    print_end
+}
+
+# 19
+aur_helper() {
+    print_section "AUR-Helper"
+    print_cmd_invisible "cd $git_dir" success
+    print_status "Installing ${CODE}$aur_helper${NOCODE}"
+    for package in "${aur_helper_packages[@]}"; do
+        print_status "Cloning ${CODE}${package}${NOCODE}"
+        print_cmd "git clone https://aur.archlinux.org/${package}.git" success
+        [ "$success" = false ] && print_fail "Failed"
+        print_cmd_invisible "cd $package" success
+        print_status "Building ${CODE}${package}${NOCODE}"
+        print_cmd "makepkg -fsri" success
+        [ "$success" = false ] && print_fail "Failed"
+        print_cmd_invisible "cd .." success
+    done
+    print_cmd_invisible "cd $home" success
+    print_end
+}
+
+# 20
+num_lock_activation() {
+    print_section "Num Lock activation"
+    print_prompt_boolean "Do you want to have NumLock activated on boot?" "y" numlock
+    if [ "$numlock" = true ] ; then
+        print_status "Installing corresponding package"
+    fi
+}
+
+# 21
+install_packages() {
+    print_section "Installation"
+    print_status "Install DE/WM packages"
+    dewm=$DE_WM
+    if [[ $dewm == "" ]] ; then
+        print_prompt "Please choose an AUR helper"
+        dewm=$answer
+    fi
+    case $dewm in
+    bspwm)
+        packages=("bspwm" "sxhkd" "xdo" "xorg")
+        ;;
+    *)
+        print_neg "Couldn't find predefined script for $dewm"
+        print_sub "Please install by your own or omit this step"
+        sub_shell
+        print_end
+        return
+        ;;
+    esac
+
+    print_status "Install predefined packages"
+    packagelist=$(printf " %s" "${PACKAGES[@]}")
+    pacman=$aur_helper
+    [[ $pacman == "" ]] && pacman="pacman"
+    print_cmd_visible_fail "sudo $pacman --color=always -S $packagelist" "" "Failed"
+
+    print_status "Install predefined AUR packages"
+    packagelist=$(printf " %s" "${AUR_PACKAGES[@]}")
+    print_cmd_visible_fail "sudo $pacman --color=always -S $packagelist" "" "Failed"
+    print_end       
+}
+
+# 22
 post_installation() {
     print_section "Post-Installation"
     print_status "Exit the ${format_code}chroot${format_no_code} and reboot into the new system"
@@ -480,6 +706,9 @@ post_installation() {
     print_status "${font_link}https://wiki.archlinux.org/index.php/General_recommendations${font_no_link}"
     print_status "For a list of applications that may be of interest, see ${font_bold}List of applications${font_no_bold}."
     print_status "${font_link}https://wiki.archlinux.org/index.php/List_of_applications${font_no_link}"
+    print_status ""
+    print_status "Thank you for using this installer script"
+    print_status "                                  - Raphael Emberger"
     print_end
 }
 

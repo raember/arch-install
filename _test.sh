@@ -5,6 +5,13 @@ loadkeys() {
 }
 
 timedatectl() {
+    echo "                      Local time: Thu 2018-04-12 18:22:58 CEST"
+    echo "                  Universal time: Thu 2018-04-12 16:22:58 UTC"
+    echo "                        RTC time: Thu 2018-04-12 16:22:58"
+    echo "                       Time zone: Europe/Zurich (CEST, +0200)"
+    echo "       System clock synchronized: yes"
+    echo "systemd-timesyncd.service active: yes"
+    echo "                 RTC in local TZ: no"
     return;
 }
 
@@ -21,5 +28,61 @@ lsblk() {
 ls() {
     return
 }
+
+pacstrap() {
+    echo "Installing..."
+    return
+}
+
+genfstab() {
+    return
+}
+fstab_file="/dev/null"
+
+cp() {
+    return
+}
+
+ln() {
+    return
+}
+
+hwclock() {
+    return
+}
+
+ip() {
+    return
+}
+
+pacman() {
+    return
+}
+
+mkinitcpio() {
+    return
+}
+
+visudo() {
+    return
+}
+
+mkdir() {
+    return
+}
+
+sudo() {
+    return
+}
+
+git() {
+    return
+}
+
+makepkg() {
+    return
+}
+
+test=true
 
 source arch.sh
