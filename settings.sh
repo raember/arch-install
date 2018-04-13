@@ -223,7 +223,7 @@ packages=(
     cifs-utils smbclient # Samba support
     xdotool
     compton #Transparency
-    gpm xf86-input-synaptics # Console mouse support
+    #gpm xf86-input-synaptics # Console mouse support
 
     # Applications
     gksu
@@ -242,7 +242,6 @@ packages=(
     #virtualbox virtualbox-host-modules-arch
 
     # Backend
-    xorg-xkill
     texlive-most texlive-lang
     libmtp gvfs # file system
     gstreamer gst-libav gst-plugins-base gst-plugins-good gst-plugins-ugly # video plugin codecs
@@ -275,7 +274,6 @@ aur_packages=(
     enpass-bin
     neofetch
     jdk jdk8 jdk9 jdk-devel
-    gst-plugins-libde265
     nordnm
 )
 # Script to run after the installation.
@@ -286,6 +284,9 @@ aftermath() {
     cp /usr/share/doc/bspwm/examples/bspwmrc $home/.config/bspwm/bspwmrc
     cp /usr/share/doc/bspwm/examples/sxkhdrc $home/.config/sxkhd/sxkhdrc
     echo "exec bspwm" > $home/.xinitrc
+
+    # powerline
+    echo -e "powerline-daemon -q\n. /usr/lib/python3.6/site-packages/powerline/bindings/zsh/powerline.zsh" >> .zshrc
 
     # vimpager
     echo -e "export PAGER='vimpager'\nalias less=\$PAGER" > $home/.bashrc

@@ -204,6 +204,8 @@ update_system_clock() {
                 print_fail "Couldn't set the timezone"
             fi
         fi
+        print_status "Waiting for the changes to take effect..."
+        sleep 2s
         print_status "Please check if the time has been set correctly:"
         print_cmd "timedatectl status" success
         if [ "$success" = true ] ; then
@@ -617,9 +619,11 @@ prepare() {
             print_cmd_invisible "cp './$file' '$home/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
+        print_cmd_invisible "chwon $username:$username '$home' -R" success
+        [ "$success" != true ] && print_fail "Failed"
         print_status "Changing directory to new location"
         print_cmd_invisible "cd $home" success
-        print_status "Substitue root to new user: ${format_code}su $username${format_no_code}"
+        print_status "Substitue root to new user: ${format_code}su $username${format_no_code} and then ${format_code}cd${format_no_code}"
         print_status "Then start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
         print_end
         exit 0;
@@ -688,12 +692,12 @@ install_packages() {
     print_status "Install predefined packages"
     packagelist=$(printf " %s" "${packages[@]}")
     print_cmd "sudo pacman --color=always -S $packagelist" success
-    [ "$success" = false ] && print_fail "Failed"
+    [ "$success" = false ] && print_neg "Failed - proceed with setup"
     if [ "$aur_helper" != "" ] ; then
         print_status "Install predefined AUR packages"
         packagelist=$(printf " %s" "${aur_packages[@]}")
         print_cmd "$aur_helper --color=always -S $packagelist" success
-        [ "$success" = false ] && print_fail "Failed"
+        [ "$success" = false ] && print_neg "Failed - proceed with setup"
         if [ "$numlock" = true ] ; then
             print_status "Enabling numlock activation service"
             print_cmd "sudo systemctl enable numLockOnTty" success
