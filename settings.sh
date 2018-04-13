@@ -185,10 +185,17 @@ packages=(
 
     # Terminal & tools
     rxvt-unicode
-    zsh
+    zsh zsh-completions
     powerline powerline-vim
-    stow mlocate wget screenfetch lolcat nmap scrot cmatrix archey3
-    ranger htop
+    stow wget nmap scrot
+    mlocate # locate db
+    screenfetch archey3 lolcat cmatrix # nice scripts
+    vimpager # vim as pager
+    exa # better ls
+    pv # pipe viewer
+    fd # better find
+    ranger # terminal based file manager
+    htop # better top
     ufw
     easy-rsa
     unrar zip
@@ -276,6 +283,13 @@ aur_packages=(
 # Used to setup installed packages
 aftermath() {
     #chsh -s $shell $username
+
+    mkdir -p $home/.config/{bspwm,sxkhd}
+    cp /usr/share/doc/bspwm/examples/bspwmrc $home/.config/bspwm/bspwmrc
+    cp /usr/share/doc/bspwm/examples/sxkhdrc $home/.config/sxkhd/sxkhdrc
+    echo "exec bspwm" > $home/.xinitrc
+
+    echo -e "export PAGER='vimpager'\nalias less=\$PAGER" > $home/.bashrc
 
     sudo pip install pywal
     #sudo modprobe vboxdrv

@@ -2,7 +2,9 @@
 
 source settings.sh
 
-script_files=("arch.sh" "arch_hist" "_format.sh" "settings.sh")
+source _format.sh
+
+script_files=("arch.sh" "arch_hist" "format.sh" "settings.sh")
 
 main() {
     case $RESUME in
@@ -348,7 +350,7 @@ chroot() {
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
     fi
-    print_status "    -> ${format_code}arch-chroot /mnt${format_no_code}"
+    print_status "    -> ${format_code}arch-chroot /mnt; cd root; ./$(basename $0) -c${format_no_code}"
     print_end
     exit 0
 }
@@ -553,7 +555,7 @@ root_password() {
     print_section "Root password"
     if [ "$username" != "" ] ; then
         print_status "Adding user $username"
-        groups_list=$(printf ",%s" "${groups[@]}")
+        groups_list=$(printf ",%s" "${groups[@]}" | cut -c2-)
         print_cmd_invisible "mkdir -p '$home'" success
         [ "$success" != true ] && print_fail "Failed"
         print_cmd_invisible "useradd $username -G $groups_list -d '$home' -s $shell" success
@@ -730,8 +732,6 @@ help() {
 	echo -e " -c\t\tResume script from inside chroot - equals '-r 11'"
 	echo -e " -h\t\tShow this help text"
 }
-
-source _format.sh
 
 RESUME=0
 while getopts "r:c" arg; do

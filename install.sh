@@ -15,7 +15,7 @@ for file in "${files[@]}"; do
 done
 source "$format"
 
-print_prompt_boolean "Do you want to edit the ${font_code}$settings${font_no_code} file?" "y" edit "Editing settings file" "Not editing"
+print_prompt_boolean "Do you want to edit the ${font_code}$settings${font_no_code} file?" "y" edit
 if [ "$edit" = true ] ; then
     vim "$settings"
 fi
