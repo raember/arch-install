@@ -120,7 +120,7 @@ modify_initramfs=false
 # Username for which the preparations are intended for(NOT root)
 username="alan"
 home="/home/$username"
-shell="/bin/zsh"
+shell="zsh"
 groups=(
     "wheel"
     "audio"

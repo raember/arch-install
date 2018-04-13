@@ -559,7 +559,13 @@ root_password() {
         groups_list=$(printf ",%s" "${groups[@]}" | cut -c2-)
         print_cmd_invisible "mkdir -p '$home'" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "useradd $username -G $groups_list -d '$home' -s $shell" success
+        [ "$shell" = "" ] && shell="bash"
+        if [ "$shell" != "bash" ] ; then
+            print_status "Installing $shell"
+            print_cmd "pacman -S --color=always $shell" success
+            [ "$success" = false ] && print_fail "Failed"
+        fi
+        print_cmd_invisible "useradd $username -G $groups_list -d '$home' -s /bin/$shell" success
         [ "$success" != true ] && print_fail "Failed"
         print_pos "User $username added"
     fi
@@ -611,11 +617,10 @@ prepare() {
         done
         print_status "Changing directory to new location"
         print_cmd_invisible "cd $home" success
-        print_status "Substitue root to new user"
+        print_status "Substitue root to new user: ${format_code}su $username${format_no_code}"
         print_status "Now start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
-        print_cmd "su $username" success
         print_end
-        exit 1;
+        exit 0;
     fi
     print_status "Making sure all the necessary directories are present"
     for dir in "${directories[@]}"; do
