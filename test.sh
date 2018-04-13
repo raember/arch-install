@@ -75,6 +75,7 @@ burgaur() { return; }
 packer() { return; }
 yaourt() { return; }
 git() { return; }
+chown() { return; }
 
 test=true
 

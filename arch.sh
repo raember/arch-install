@@ -559,6 +559,8 @@ root_password() {
         groups_list=$(printf ",%s" "${groups[@]}" | cut -c2-)
         print_cmd_invisible "mkdir -p '$home'" success
         [ "$success" != true ] && print_fail "Failed"
+        print_cmd_invisible "chown $user:$user '$home' -R" success
+        [ "$success" != true ] && print_fail "Failed"
         [ "$shell" = "" ] && shell="bash"
         if [ "$shell" != "bash" ] ; then
             print_status "Installing $shell"
@@ -618,7 +620,7 @@ prepare() {
         print_status "Changing directory to new location"
         print_cmd_invisible "cd $home" success
         print_status "Substitue root to new user: ${format_code}su $username${format_no_code}"
-        print_status "Now start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
+        print_status "Then start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
         print_end
         exit 0;
     fi
