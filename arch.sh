@@ -2,7 +2,7 @@
 
 source settings.sh
 
-source _format.sh
+source format.sh
 
 script_files=("arch.sh" "arch_hist" "format.sh" "settings.sh")
 
