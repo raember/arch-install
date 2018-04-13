@@ -184,7 +184,7 @@ sub_shell() {
     done
     history -w arch_hist
 }
-history -r arch_hist
+[ -d arch_hist ] && history -r arch_hist
 set -o vi
 CMD=""
 display_next_entry() {
