@@ -11,6 +11,7 @@ for file in "${files[@]}"; do
         echo "Couldn't download file $file"
         exit 1;
     fi
+    chmod +x "$file"
 done
 source "$format"
 
