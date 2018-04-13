@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# wget() {
+#     filename=$(echo "$1" | egrep -o "/[^/]+?$")
+#     cp "..$filename" .
+#     return;
+# }
+# ./install.sh
+
 loadkeys() { return; }
 timedatectl() {
     echo "                      Local time: Thu 2018-04-12 18:22:58 CEST"

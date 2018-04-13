@@ -2,12 +2,8 @@
 
 start="arch.sh"
 settings="settings.sh"
-files=("$start" "arch_post.sh" "_format.sh" "$settings")
-# wget() {
-#     filename=$(echo "$1" | egrep -o "/[^/]+?$")
-#     cp "..$filename" .
-#     return;
-# }
+files=("$start" "_format.sh" "$settings")
+
 echo "Downloading files..."
 for file in "${files[@]}"; do
     if !(wget "https://raw.githubusercontent.com/raember/arch-install/master/$file"); then
