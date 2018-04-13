@@ -133,6 +133,7 @@ groups=(
 git_dir="$home/Dokumente/git"
 
 # Dotfiles location and repo
+# default: (skip)
 dotfiles_git="https://raember@github.com/raember/dotfiles.git"
 dotfiles_dir="$home/dotfiles"
 dotfiles_install="./install.sh"
@@ -176,13 +177,12 @@ pacman_alias="$aur_helper"
 # default: (asks)
 numlock=true
 
-# DE/WM name
-# default: (asks)
-de_wm="bspwm"
-
 # Packages to install(non-AUR)
 # default: omit
 packages=(
+    # WM
+    bspwm sxhkd xdo xorg
+
     # Terminal & tools
     rxvt-unicode
     zsh

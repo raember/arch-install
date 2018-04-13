@@ -675,22 +675,6 @@ num_lock_activation() {
 # 21
 install_packages() {
     print_section "Installation"
-    if [ $de_wm = "" ] ; then
-        print_prompt "Please choose a DE or a WM to install"
-        de_wm=$answer
-    fi
-    case $de_wm in
-        bspwm)
-            packages+=("bspwm" "sxhkd" "xdo" "xorg")
-            ;;
-        *)
-            print_neg "Couldn't find predefined script for $dewm"
-            print_sub "Please install by your own or omit this step"
-            sub_shell
-            print_end
-            return
-            ;;
-    esac
     print_status "Install predefined packages"
     packagelist=$(printf " %s" "${packages[@]}")
     print_cmd "sudo $pacman_alias --color=always -S $packagelist" success
@@ -705,6 +689,17 @@ install_packages() {
         print_cmd "sudo systemctl enable numLockOnTty" success
         [ "$success" = false ] && print_fail "Failed"
         print_status "Enabling succeeded"
+    fi
+    print_cmd_invisible "cd $home" success
+    [ "$success" = false ] && print_fail "Failed"
+    if [ "$dotfiles_git" != "" ] ; then
+        print_status "Cloning dotfiles repo"
+        print_cmd "git clone '$dotfiles_git' '$dotfiles_dir'" success
+        [ "$success" = false ] && print_fail "Failed"
+        print_cmd_invisible "cd '$dotfiles_dir'" success
+        [ "$success" = false ] && print_fail "Failed"
+        print_cmd "'$dotfiles_install'" success
+        [ "$success" = false ] && print_fail "Failed"
     fi
     print_end
 }

@@ -74,6 +74,7 @@ aurget() { return; }
 burgaur() { return; }
 packer() { return; }
 yaourt() { return; }
+git() { return; }
 
 test=true
 
