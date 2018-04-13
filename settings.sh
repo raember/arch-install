@@ -187,7 +187,10 @@ packages=(
     rxvt-unicode
     zsh zsh-completions
     powerline powerline-vim
-    stow wget nmap scrot
+    stow # used for deploying dotfiles
+    wget
+    nmap
+    scrot # screenshot tool
     mlocate # locate db
     screenfetch archey3 lolcat cmatrix # nice scripts
     vimpager # vim as pager
@@ -199,18 +202,18 @@ packages=(
     ufw
     easy-rsa
     unrar zip
-    valgrind gbd ddd
+    #valgrind gbd ddd
 
     # Programming language support
     nodejs
     sassc
     lessc
-    python-pip
+    python python-pip
     #jdk10-openjdk jdk9-openjdk jdk8-openjdk
 
     # IDEs
     netbeans
-    mono
+    mono xterm
 
     # Other
     redshift python-gobject python-xdg gtk3 gpsd
@@ -282,23 +285,28 @@ aur_packages=(
 # Script to run after the installation.
 # Used to setup installed packages
 aftermath() {
-    #chsh -s $shell $username
-
+    # bspwm
     mkdir -p $home/.config/{bspwm,sxkhd}
     cp /usr/share/doc/bspwm/examples/bspwmrc $home/.config/bspwm/bspwmrc
     cp /usr/share/doc/bspwm/examples/sxkhdrc $home/.config/sxkhd/sxkhdrc
     echo "exec bspwm" > $home/.xinitrc
 
+    # vimpager
     echo -e "export PAGER='vimpager'\nalias less=\$PAGER" > $home/.bashrc
 
-    sudo pip install pywal
-    #sudo modprobe vboxdrv
-
+    # ufw
     sudo ufw default deny
     sudo ufw enable
     sudo systemctl enable ufw
     sudo systemctl start ufw
 
+    # python-pip
+    sudo pip install pywal
+
+    # virtualbox
+    #sudo modprobe vboxdrv
+
+    # cups
     sudo systemctl enable org.cups.cupsd.service
     sudo systemctl start org.cups.cupsd.service
 

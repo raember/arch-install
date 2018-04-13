@@ -350,7 +350,8 @@ chroot() {
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
     fi
-    print_status "    -> ${format_code}arch-chroot /mnt; cd root; ./$(basename $0) -c${format_no_code}"
+    print_status "    -> ${format_code}arch-chroot /mnt"
+    print_status "    -> ${format_code}cd root; ./$(basename $0) -c${format_no_code}"
     print_end
     exit 0
 }
@@ -602,7 +603,7 @@ boot_loader() {
 # 18
 prepare() {
     print_section "Preparation"
-    if [ $PWD = $home ] ; then
+    if [ $PWD != $home ] ; then
         print_status "Copying script files to new location"
         for file in "${script_files[@]}"; do
             print_cmd_invisible "cp './$file' '$home/$file'" success
