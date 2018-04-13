@@ -13,6 +13,8 @@ for file in "${files[@]}"; do
     fi
     chmod +x "$file"
 done
+echo "I am in $PWD"
+ls -lAh "$format"
 source "$format"
 
 print_prompt_boolean "Do you want to edit the ${font_code}$settings${font_no_code} file?" "y" edit "Editing settings file" "Not editing"
