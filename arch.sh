@@ -687,19 +687,26 @@ install_packages() {
     print_section "Installation"
     print_status "Install predefined packages"
     packagelist=$(printf " %s" "${packages[@]}")
-    print_cmd "sudo $pacman_alias --color=always -S $packagelist" success
+    print_cmd "sudo pacman --color=always -S $packagelist" success
     [ "$success" = false ] && print_fail "Failed"
-
-    print_status "Install predefined AUR packages"
-    packagelist=$(printf " %s" "${aur_packages[@]}")
-    print_cmd "sudo $pacman_alias --color=always -S $packagelist" success
-    [ "$success" = false ] && print_fail "Failed"
-    if [ "$numlock" = true ] ; then
-        print_status "Enabling numlock activation service"
-        print_cmd "sudo systemctl enable numLockOnTty" success
+    if [ "$aur_helper" != "" ] ; then
+        print_status "Install predefined AUR packages"
+        packagelist=$(printf " %s" "${aur_packages[@]}")
+        print_cmd "$aur_helper --color=always -S $packagelist" success
         [ "$success" = false ] && print_fail "Failed"
-        print_status "Enabling succeeded"
+        if [ "$numlock" = true ] ; then
+            print_status "Enabling numlock activation service"
+            print_cmd "sudo systemctl enable numLockOnTty" success
+            [ "$success" = false ] && print_fail "Failed"
+            print_status "Enabling succeeded"
+        fi
     fi
+    print_end
+}
+
+# 22
+post_installation() {
+    print_section "Post-Installation"
     print_cmd_invisible "cd $home" success
     [ "$success" = false ] && print_fail "Failed"
     if [ "$dotfiles_git" != "" ] ; then
@@ -711,12 +718,6 @@ install_packages() {
         print_cmd "'$dotfiles_install'" success
         [ "$success" = false ] && print_fail "Failed"
     fi
-    print_end
-}
-
-# 22
-post_installation() {
-    print_section "Post-Installation"
     print_status "Running the aftermath script"
     print_cmd "aftermath" success
     [ "$success" = false ] && print_fail "Failed"

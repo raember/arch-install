@@ -169,10 +169,6 @@ aur_helper_packages=(
     "$aur_helper"
 )
 
-# Pacman alias
-# default: pacman
-pacman_alias="$aur_helper"
-
 # Numlock activation on boot
 # default: (asks)
 numlock=true
@@ -185,7 +181,7 @@ packages=(
 
     # Terminal & tools
     rxvt-unicode
-    zsh zsh-completions
+    zsh-completions
     powerline powerline-vim
     stow # used for deploying dotfiles
     wget
@@ -208,7 +204,7 @@ packages=(
     nodejs
     sassc
     lessc
-    python python-pip
+    python-pip
     #jdk10-openjdk jdk9-openjdk jdk8-openjdk
 
     # IDEs
@@ -217,17 +213,17 @@ packages=(
 
     # Other
     redshift python-gobject python-xdg gtk3 gpsd
-    network-manager-applet NetworkManager-openconnect
+    network-manager-applet networkmanager-openconnect networkmanager-openvpn
     pulseaudio alsa-tools pulseaudio-alsa pulseaudio-bluetooth pavucontrol
     rhythmbox
     slim slim-themes
     flashplugin
     openssh
     openvpn
-    cfs-utils smbclient # Samba support
-    xorg-xdotools
+    cifs-utils smbclient # Samba support
+    xdotool
     compton #Transparency
-    gpm xf86-input-synaptics # Consoe mouse support
+    gpm xf86-input-synaptics # Console mouse support
 
     # Applications
     gksu
@@ -242,15 +238,15 @@ packages=(
     texmaker
     tigervnc
     qiv
-    gvim
+    
     #virtualbox virtualbox-host-modules-arch
 
     # Backend
     xorg-xkill
     texlive-most texlive-lang
-    libmtp gvfs-m # file system
+    libmtp gvfs # file system
     gstreamer gst-libav gst-plugins-base gst-plugins-good gst-plugins-ugly # video plugin codecs
-    libmpeg2 libmad libmpcodec libvorbis libvpx wavpack x264 x265 xvidcore ffmpeg # multimedia codecs
+    libmpeg2 libmad libvorbis libvpx wavpack x264 x265 xvidcore ffmpeg # multimedia codecs
     libinput # touchpad
     cups cups-pdf
 )
