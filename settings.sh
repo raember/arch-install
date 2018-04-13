@@ -120,7 +120,7 @@ modify_initramfs=false
 # Username for which the preparations are intended for(NOT root)
 username="alan"
 home="/home/$username"
-shell="zsh"
+shell="/bin/zsh"
 groups=(
     "wheel"
     "audio"
@@ -185,7 +185,7 @@ de_wm="bspwm"
 packages=(
     # Terminal & tools
     rxvt-unicode
-    $shell
+    zsh
     powerline powerline-vim
     stow mlocate wget screenfetch lolcat nmap scrot cmatrix archey3
     ranger htop
@@ -272,7 +272,6 @@ aur_packages=(
     gst-plugins-libde265
     nordnm
 )
-
 # Script to run after the installation.
 # Used to setup installed packages
 aftermath() {
