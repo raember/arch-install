@@ -2,7 +2,8 @@
 
 start="arch.sh"
 settings="settings.sh"
-files=("$start" "format.sh" "$settings")
+format="format.sh"
+files=("$start" "$format" "$settings")
 
 echo "Downloading files..."
 for file in "${files[@]}"; do
@@ -11,7 +12,7 @@ for file in "${files[@]}"; do
         exit 1;
     fi
 done
-source _format.sh
+source "$format"
 
 print_prompt_boolean "Do you want to edit the ${font_code}$settings${font_no_code} file?" "y" edit "Editing settings file" "Not editing"
 if [ "$edit" = true ] ; then
