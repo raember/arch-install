@@ -2,7 +2,7 @@
 
 source settings.sh
 
-script_files=("arch.sh" "_format.sh" "settings.sh")
+script_files=("arch.sh" "arch_hist" "_format.sh" "settings.sh")
 
 main() {
     case $RESUME in
@@ -396,7 +396,7 @@ time_zone() {
     fi
     print_end
 }
-function join_by { local IFS="$1"; shift; echo "$*"; }
+
 # 12
 locale() {
     print_section "Locale"
@@ -551,10 +551,16 @@ initramfs() {
 # 16
 root_password() {
     print_section "Root password"
-    print_status "It's time to set the root password and add users and groups. Commands:"
-    print_status "- ${format_code}passwd [user]${format_no_code}"
-    print_status "- ${format_code}useradd <name> -G {group1,...,groupN} -d <home_dir> -s <shell>${format_no_code}"
-    print_status "Don't forget to make sure the user has a home directory"
+    if [ "$username" != "" ] ; then
+        print_status "Adding user $username"
+        groups_list=$(printf ",%s" "${groups[@]}")
+        print_cmd_invisible "mkdir -p '$home'" success
+        [ "$success" != true ] && print_fail "Failed"
+        print_cmd_invisible "useradd $username -G $groups_list -d '$home' -s $shell" success
+        [ "$success" != true ] && print_fail "Failed"
+        print_pos "User $username added"
+    fi
+    print_status "It's time to set the root password and add users and groups."
     sub_shell
     print_prompt "Edit the ${format_code}/etc/sudoers${format_no_code} file to allow users in the group ${format_code}wheel${format_no_code} to execute ${format_code}sudo${format_no_code}"
     print_cmd "visudo" success
@@ -625,7 +631,7 @@ prepare() {
     done
     print_status "Checking internet connectivity"
     make_sure_internet_is_connected
-    print_prompt_boolean "Do you want to enable ${CODE}multilib${NOCODE}?" "y" multilib
+    print_prompt_boolean "Do you want to enable ${format_code}multilib${format_no_code}?" "y" multilib
     if [ "$multilib" = true ] ; then
         print_cmd "sudo vim /etc/pacman.conf" success
         [ "$success" = false ] && print_fail "Failed"
@@ -639,13 +645,13 @@ prepare() {
 aur_helper() {
     print_section "AUR-Helper"
     print_cmd_invisible "cd $git_dir" success
-    print_status "Installing ${CODE}$aur_helper${NOCODE}"
+    print_status "Installing ${format_code}$aur_helper${format_no_code}"
     for package in "${aur_helper_packages[@]}"; do
-        print_status "Cloning ${CODE}${package}${NOCODE}"
+        print_status "Cloning ${format_code}${package}${format_no_code}"
         print_cmd "git clone https://aur.archlinux.org/${package}.git" success
         [ "$success" = false ] && print_fail "Failed"
         print_cmd_invisible "cd $package" success
-        print_status "Building ${CODE}${package}${NOCODE}"
+        print_status "Building ${format_code}${package}${format_no_code}"
         print_cmd "makepkg -fsri" success
         [ "$success" = false ] && print_fail "Failed"
         print_cmd_invisible "cd .." success
@@ -657,49 +663,58 @@ aur_helper() {
 # 20
 num_lock_activation() {
     print_section "Num Lock activation"
-    print_prompt_boolean "Do you want to have NumLock activated on boot?" "y" numlock
+    [ "$numlock" = "" ] && print_prompt_boolean "Do you want to have NumLock activated on boot?" "y" numlock
     if [ "$numlock" = true ] ; then
-        print_status "Installing corresponding package"
+        package="systemd-numlockontty"
+        print_status "Adding package ${format_code}$package${format_no_code}"
+        aur_packages+=("systemd-numlockontty")
     fi
+    print_end
 }
 
 # 21
 install_packages() {
     print_section "Installation"
-    print_status "Install DE/WM packages"
-    dewm=$DE_WM
-    if [[ $dewm == "" ]] ; then
-        print_prompt "Please choose an AUR helper"
-        dewm=$answer
+    if [ $de_wm = "" ] ; then
+        print_prompt "Please choose a DE or a WM to install"
+        de_wm=$answer
     fi
-    case $dewm in
-    bspwm)
-        packages=("bspwm" "sxhkd" "xdo" "xorg")
-        ;;
-    *)
-        print_neg "Couldn't find predefined script for $dewm"
-        print_sub "Please install by your own or omit this step"
-        sub_shell
-        print_end
-        return
-        ;;
+    case $de_wm in
+        bspwm)
+            packages+=("bspwm" "sxhkd" "xdo" "xorg")
+            ;;
+        *)
+            print_neg "Couldn't find predefined script for $dewm"
+            print_sub "Please install by your own or omit this step"
+            sub_shell
+            print_end
+            return
+            ;;
     esac
-
     print_status "Install predefined packages"
-    packagelist=$(printf " %s" "${PACKAGES[@]}")
-    pacman=$aur_helper
-    [[ $pacman == "" ]] && pacman="pacman"
-    print_cmd_visible_fail "sudo $pacman --color=always -S $packagelist" "" "Failed"
+    packagelist=$(printf " %s" "${packages[@]}")
+    print_cmd "sudo $pacman_alias --color=always -S $packagelist" success
+    [ "$success" = false ] && print_fail "Failed"
 
     print_status "Install predefined AUR packages"
-    packagelist=$(printf " %s" "${AUR_PACKAGES[@]}")
-    print_cmd_visible_fail "sudo $pacman --color=always -S $packagelist" "" "Failed"
-    print_end       
+    packagelist=$(printf " %s" "${aur_packages[@]}")
+    print_cmd "sudo $pacman_alias --color=always -S $packagelist" success
+    [ "$success" = false ] && print_fail "Failed"
+    if [ "$numlock" = true ] ; then
+        print_status "Enabling numlock activation service"
+        print_cmd "sudo systemctl enable numLockOnTty" success
+        [ "$success" = false ] && print_fail "Failed"
+        print_status "Enabling succeeded"
+    fi
+    print_end
 }
 
 # 22
 post_installation() {
     print_section "Post-Installation"
+    print_status "Running the aftermath script"
+    print_cmd "aftermath" success
+    [ "$success" = false ] && print_fail "Failed"
     print_status "Exit the ${format_code}chroot${format_no_code} and reboot into the new system"
     print_status "See ${font_bold}General recommendations${font_no_bold} for system management directions and post-installation tutorials"
     print_status "(like setting up a graphical user interface, sound or a touchpad)"

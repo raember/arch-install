@@ -1,9 +1,6 @@
 #!/bin/bash
 
-loadkeys() {
-    return;
-}
-
+loadkeys() { return; }
 timedatectl() {
     echo "                      Local time: Thu 2018-04-12 18:22:58 CEST"
     echo "                  Universal time: Thu 2018-04-12 16:22:58 UTC"
@@ -14,7 +11,6 @@ timedatectl() {
     echo "                 RTC in local TZ: no"
     return;
 }
-
 lsblk() {
     echo "NAME   TYPE FSTYPE  LABEL             SIZE MOUNTPOINT HOTPLUG"
     echo "sda    disk                           128G                  0"
@@ -24,64 +20,53 @@ lsblk() {
     echo "\`-sdc1 part ntfs    16GB-Patriot-Tab 14.4G                  1"
     echo "sr0    rom  iso9660 ARCH_201804       556M                  1"
 }
-
-ls() {
-    return
-}
-
+ls() { return; }
+locale-gen() { return; }
 pacstrap() {
     echo "Installing..."
     return
 }
-
-genfstab() {
-    return
-}
+genfstab() { return; }
 fstab_file="/dev/null"
+cp() { return; }
+ln() { return; }
+hwclock() { return; }
+ip() { return; }
+pacman() { return; }
+mkinitcpio() { return; }
+visudo() { return; }
+sh() { return; }
+mkdir() { return; }
+useradd() { return; }
+sudo() { return; }
+git() { return; }
+makepkg() { return; }
 
-cp() {
-    return
-}
-
-ln() {
-    return
-}
-
-hwclock() {
-    return
-}
-
-ip() {
-    return
-}
-
-pacman() {
-    return
-}
-
-mkinitcpio() {
-    return
-}
-
-visudo() {
-    return
-}
-
-mkdir() {
-    return
-}
-
-sudo() {
-    return
-}
-
-git() {
-    return
-}
-
-makepkg() {
-    return
-}
+#AUR-helpers:
+aurman() { return; }
+aurutils() { return; }
+bauerbill() { return; }
+pakku() { return; }
+pikaur() { return; }
+PKGBUILDer() { return; }
+auracle-git() { return; }
+package-query() { return; }
+repoctl() { return; }
+trizen() { return; }
+yay() { return; }
+naaman() { return; }
+aura() { return; }
+pbget() { return; }
+yaah() { return; }
+aurel-git() { return; }
+cower() { return; }
+pacaur() { return; }
+wrapaur() { return; }
+spinach() { return; }
+aurget() { return; }
+burgaur() { return; }
+packer() { return; }
+yaourt() { return; }
 
 test=true
 

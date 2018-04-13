@@ -120,6 +120,14 @@ modify_initramfs=false
 # Username for which the preparations are intended for(NOT root)
 username="alan"
 home="/home/$username"
+shell="zsh"
+groups=(
+    "wheel"
+    "audio"
+    "video"
+    "power"
+    "games"
+)
 
 # Directory for Git repositories
 git_dir="$home/Dokumente/git"
@@ -164,11 +172,20 @@ aur_helper_packages=(
 # default: pacman
 pacman_alias="$aur_helper"
 
-DE_WM="bspwm"
-PACKAGES=(
+# Numlock activation on boot
+# default: (asks)
+numlock=true
+
+# DE/WM name
+# default: (asks)
+de_wm="bspwm"
+
+# Packages to install(non-AUR)
+# default: omit
+packages=(
     # Terminal & tools
     rxvt-unicode
-    zsh
+    $shell
     powerline powerline-vim
     stow mlocate wget screenfetch lolcat nmap scrot cmatrix archey3
     ranger htop
@@ -228,7 +245,9 @@ PACKAGES=(
     cups cups-pdf
 )
 
-AUR_PACKAGES=(
+# Packages to install(non-AUR)
+# default: omit
+aur_packages=(
     # Applications
     visual-studio-code-bin
     slack-desktop
@@ -254,11 +273,13 @@ AUR_PACKAGES=(
     nordnm
 )
 
-POST_INSTALL() {
+# Script to run after the installation.
+# Used to setup installed packages
+aftermath() {
+    #chsh -s $shell $username
+
     sudo pip install pywal
     #sudo modprobe vboxdrv
-
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 
     sudo ufw default deny
     sudo ufw enable
@@ -267,4 +288,6 @@ POST_INSTALL() {
 
     sudo systemctl enable org.cups.cupsd.service
     sudo systemctl start org.cups.cupsd.service
+
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 }
