@@ -2,7 +2,7 @@
 
 start="arch.sh"
 settings="settings.sh"
-files=("$start" "_format.sh" "$settings")
+files=("$start" "format.sh" "$settings")
 
 echo "Downloading files..."
 for file in "${files[@]}"; do
