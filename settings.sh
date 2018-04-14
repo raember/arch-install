@@ -39,13 +39,87 @@ ping_address="archlinux.org"
 # Nothing to change here
 
 #### Partition the disks
-# Nothing to change here
+# Use seperate script to partition the disks automatically
+# default: (asks user to partition the disks manually)
+partitioning_scripted=true
+
+# Partitioning script. $UEFI is provided by the arch.sh
+partition_the_disks() {
+    disk="/dev/sda"
+    (
+        if [ "$UEFI" = true ] ; then # EFI partition needed
+            echo "n"    # Add a new partition
+            echo ""     # Partition number (default: 1)
+            echo ""     # First sector (default: 2048)
+            echo "+550M" # Last sector (default: (max))
+                        # Current type is 'Linux filesystem'
+            echo "EF00" # Hex code of GUID (default: 8300)
+                        # Changed type of partition to 'EFI system'
+            boot="${disk}1"
+        else # BIOS boot partition needed
+            echo "n"    # Add a new partition
+            echo ""     # Partition number (default: 1)
+            echo ""     # First sector (default: 2048)
+            echo "+1M"  # Last sector (default: (max))
+                        # Current type is 'Linux filesystem'
+            echo "EF02" # Hex code of GUID (default: 8300)
+                        # Changed type of partition to 'BIOS boot partition'
+        fi
+
+        # Swap partition
+        echo "n"    # Add a new partition
+        echo ""     # Partition number (default: 1)
+        echo ""     # First sector (default: x)
+        echo "+4G"  # Last sector (default: (max))
+                    # Current type is 'Linux filesystem'
+        echo "8200" # Hex code of GUID (default: 8300)
+                    # Changed type of partition to 'Linux swap'
+        swap="${disk}2"
+                    
+        # Root partition
+        echo "n"    # Add a new partition
+        echo ""     # Partition number (default: 1)
+        echo ""     # First sector (default: x)
+        echo ""     # Last sector (default: (max))
+                    # Current type is 'Linux filesystem'
+        echo ""     # Hex code of GUID (default: 8300)
+                    # Changed type of partition to 'Linux swap'
+        root="${disk}3"
+
+        echo "w"    # Write table to disk and exit
+        echo "y"
+    ) | gdisk $disk
+}
 
 #### Format the partitions
-# Nothing to change here
+# Use seperate script to format the disks automatically
+# default: (asks user to format the disks manually)
+formatting_scripted=true
+
+# Formatting script. $UEFI is provided by the arch.sh
+format_the_partitions() {
+    [ "$boot" != "" ] && mkfs.fat -F32 "$boot"
+    echo "" #for somereason without this, the script breaks
+    mkswap "$swap"
+    swapon "$swap"
+    mkfs.ext4 "$root"
+}
 
 #### Mount the file systems
-# Nothing to change here
+# Use seperate script to mount the disks automatically
+# default: (asks user to mount the disks manually)
+mounting_scripted=true
+
+# Mounting script.
+mount_the_partitions() {
+    root_dir="/mnt"
+    mount $root $root_dir
+    if [ "$boot" != "" ] ; then
+        boot_dir="$root_dir/boot"
+        mkdir -p "$boot_dir"
+        mount $boot $boot_dir
+    fi
+}
 
 
 ####################################################################################################
@@ -53,7 +127,10 @@ ping_address="archlinux.org"
 #
 #### Select the mirrors
 # default: (asks)
-edit_mirrorlist=false
+rank_by_speed=true
+
+# default: (asks)
+edit_mirrorlist=true
 
 #### Install the base packages
 # Additional packages to install

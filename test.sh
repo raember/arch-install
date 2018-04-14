@@ -33,6 +33,13 @@ pacstrap() {
     echo "Installing..."
     return
 }
+fdisk() { return; }
+gdisk() { return; }
+mkswap() { return; }
+swapon() { return; }
+mkfs.ext4() { return; }
+mkfs.fat() { return; }
+mount() { return; }
 genfstab() { return; }
 fstab_file="/dev/null"
 cp() { return; }
@@ -79,4 +86,7 @@ chown() { return; }
 
 test=true
 
+# source settings.sh
+# format_the_partitions
+# exit
 source arch.sh

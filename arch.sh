@@ -140,7 +140,7 @@ set_keyboard_layout() {
         print_prompt "Please choose a keyboard layout:" "> "
         keyboard_layout="$answer"
     fi
-    print_cmd "loadkeys $keyboard_layout" success
+    print_cmd_invisible "loadkeys $keyboard_layout" success
     if [ "$success" = true ] ; then
         print_pos "Set keyboard layout to ${format_variable}${keyboard_layout}"
     else
@@ -227,50 +227,67 @@ update_system_clock() {
 # 4
 partition_disks() {
     print_section "Partition the disks"
-    print_status "Listing all block devices..."
-    print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-    [ "$success" = false ] && print_fail "Something went horribly wrong"
-    print_status "The following partitions are ${font_bold}required${font_no_bold} for a chosen device:"
-    print_status " - One partition for the root directory ${format_code}/${format_no_code}"
-    print_check_file "/sys/firmware/efi/efivars" success
-    if [ "$success" = true ]; then
-        print_status " - an ${font_bold}EFI System Partition${font_no_bold}(fat32):"
-        print_status "   ${font_link}https://wiki.archlinux.org/index.php/EFI_System_Partition${font_no_link}"
+    if [ "$partitioning_scripted" = true ] ; then
+        print_check_file "/sys/firmware/efi/efivars" UEFI
+        print_cmd partition_the_disks success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+    else
+        print_status "Listing all block devices..."
+        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+        print_status "The following partitions are ${font_bold}required${font_no_bold} for a chosen device:"
+        print_status " - One partition for the root directory ${format_code}/${format_no_code}"
+        print_check_file "/sys/firmware/efi/efivars" success
+        if [ "$success" = true ]; then
+            print_status " - an ${font_bold}EFI System Partition${font_no_bold}(fat32):"
+            print_status "   ${font_link}https://wiki.archlinux.org/index.php/EFI_System_Partition${font_no_link}"
+        fi
+        print_status ""
+        print_status "To modify partition tables, use ${format_code}fdisk /dev/sdX${format_no_code} or ${format_code}parted /dev/sdX${format_no_code}."
+        print_status "If desired, setting up LVM, LUKS or RAID, do so now as well"
+        sub_shell
     fi
-    print_status ""
-    print_status "To modify partition tables, use ${format_code}fdisk /dev/sdX${format_no_code} or ${format_code}parted /dev/sdX${format_no_code}."
-    print_status "If desired, setting up LVM, LUKS or RAID, do so now as well"
-    sub_shell
     print_end
 }
 
 # 5
 format_partitions() {
     print_section "Format the partitions"
-    print_status "Listing all block devices..."
-    print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-    [ "$success" = false ] && print_fail "Something went horribly wrong"
-    print_status "Format the partitions with the desired file systems. Example:"
-    print_status "${format_code}mkfs.ext4 /dev/sdXN${format_no_code}"
-    print_status "If you prepared a swap partition, enable it:"
-    print_status "${format_code}mkswap /dev/sdXN${format_no_code}"
-    print_status "${format_code}swapon /dev/sdXN${format_no_code}"
-    sub_shell
+    if [ "$formatting_scripted" = true ] ; then
+        print_check_file "/sys/firmware/efi/efivars" UEFI
+        print_cmd format_the_partitions success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+    else
+        print_status "Listing all block devices..."
+        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+        print_status "Format the partitions with the desired file systems. Example:"
+        print_status "${format_code}mkfs.ext4 /dev/sdXN${format_no_code}"
+        print_status "If you prepared a swap partition, enable it:"
+        print_status "${format_code}mkswap /dev/sdXN${format_no_code}"
+        print_status "${format_code}swapon /dev/sdXN${format_no_code}"
+        sub_shell
+    fi
     print_end
 }
 
 # 6
 mount_file_systems() {
     print_section "Mount the file systems"
-    print_status "Listing all block devices..."
-    print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-    [ "$success" = false ] && print_fail "Something went horribly wrong"
-    print_status "Mount the root partition of the new system to ${format_code}/mnt${format_no_code}:"
-    print_status "${format_code}mount /dev/sdXN /mnt${format_no_code}"
-    print_status "Create mount points for any remaining partitions and mount them accordingly: "
-    print_status "${format_code}mkdir /mnt/boot${format_no_code}"
-    print_status "${format_code}mount /dev/sdXN /mnt/boot${format_no_code}"
-    sub_shell
+    if [ "$mounting_scripted" = true ] ; then
+        print_cmd mount_the_partitions success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+    else
+        print_status "Listing all block devices..."
+        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
+        [ "$success" = false ] && print_fail "Something went horribly wrong"
+        print_status "Mount the root partition of the new system to ${format_code}/mnt${format_no_code}:"
+        print_status "${format_code}mount /dev/sdXN /mnt${format_no_code}"
+        print_status "Create mount points for any remaining partitions and mount them accordingly: "
+        print_status "${format_code}mkdir /mnt/boot${format_no_code}"
+        print_status "${format_code}mount /dev/sdXN /mnt/boot${format_no_code}"
+        sub_shell
+    fi
     print_end
 }
 
