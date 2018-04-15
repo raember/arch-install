@@ -98,10 +98,14 @@ formatting_scripted=true
 
 # Formatting script. $UEFI is provided by the arch.sh
 format_the_partitions() {
-    [ "$boot" != "" ] && mkfs.fat -F32 "$boot"
-    echo "" #for somereason without this, the script breaks
+    if [ "$boot" != "" ] ; then
+        echo "Boot partition: $boot"
+        mkfs.fat -F32 "$boot"
+    fi
+    echo "Swap partition: $swap"
     mkswap "$swap"
     swapon "$swap"
+    echo "Root partition: $root"
     mkfs.ext4 "$root"
 }
 
