@@ -384,6 +384,9 @@ aftermath() {
     # virtualbox
     #sudo modprobe vboxdrv
 
+    # slim
+    sudo systemctl enable slim
+
     # cups
     sudo systemctl enable org.cups.cupsd.service
     sudo systemctl start org.cups.cupsd.service

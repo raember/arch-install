@@ -646,7 +646,7 @@ prepare() {
             print_cmd_invisible "cp './$file' '$home/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
-        print_cmd_invisible "chwon $username:$username '$home' -R" success
+        print_cmd_invisible "chown $username:$username '$home' -R" success
         [ "$success" != true ] && print_fail "Failed"
         print_status "Changing directory to new location"
         print_cmd_invisible "cd $home" success
