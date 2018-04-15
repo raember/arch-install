@@ -294,6 +294,14 @@ mount_file_systems() {
 # 7
 select_mirrors() {
     print_section "Select the mirrors"
+    if  [ "$rank_by_speed" = true ] ; then
+        print_cmd_invisible "cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup" success
+        [ "$success" != true ] && print_fail "Failed"
+        print_cmd_invisible "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist.backup" success
+        [ "$success" != true ] && print_fail "Failed"
+        print_cmd_invisible "rankmirrors /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist" success
+        [ "$success" != true ] && print_fail "Failed"
+    fi
     if [ "$edit_mirrorlist" = "" ] ; then
         print_prompt_boolean "Do you want to edit the mirrorlist?" "y" edit_mirrorlist
     fi
