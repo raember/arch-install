@@ -99,14 +99,12 @@ formatting_scripted=true
 # Formatting script. $UEFI is provided by the arch.sh
 format_the_partitions() {
     if [ "$boot" != "" ] ; then
-        echo "Boot partition: $boot"
-        mkfs.fat -F32 "$boot"
+        mkfs.fat -F32 /dev/sda1
     fi
-    echo "Swap partition: $swap"
-    mkswap "$swap"
-    swapon "$swap"
-    echo "Root partition: $root"
-    mkfs.ext4 "$root"
+    echo ""
+    mkswap /dev/sda2
+    swapon /dev/sda2
+    mkfs.ext4 /dev/sda3
 }
 
 #### Mount the file systems
@@ -266,7 +264,7 @@ packages=(
     # Terminal & tools
     rxvt-unicode
     zsh-completions
-    powerline powerline-vim
+    #powerline powerline-vim
     stow # used for deploying dotfiles
     wget
     nmap
