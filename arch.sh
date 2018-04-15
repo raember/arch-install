@@ -304,9 +304,9 @@ select_mirrors() {
     if  [ "$rank_by_speed" = true ] ; then
         print_cmd_invisible "cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist.backup" success
+        print_cmd_invisible "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist.backup.enabled" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "rankmirrors /etc/pacman.d/mirrorlist.backup > /etc/pacman.d/mirrorlist" success
+        print_cmd_invisible "rankmirrors /etc/pacman.d/mirrorlist.backup.enabled > /etc/pacman.d/mirrorlist" success
         [ "$success" != true ] && print_fail "Failed"
     fi
     if [ "$edit_mirrorlist" = "" ] ; then
