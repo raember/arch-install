@@ -44,8 +44,11 @@ ping_address="archlinux.org"
 partitioning_scripted=true
 
 # Partitioning script. $UEFI is provided by the arch.sh
+disk="/dev/sda"
+boot="${disk}1"
+swap="${disk}2"
+root="${disk}3"
 partition_the_disks() {
-    disk="/dev/sda"
     (
         if [ "$UEFI" = true ] ; then # EFI partition needed
             echo "n"    # Add a new partition
@@ -55,7 +58,6 @@ partition_the_disks() {
                         # Current type is 'Linux filesystem'
             echo "EF00" # Hex code of GUID (default: 8300)
                         # Changed type of partition to 'EFI system'
-            boot="${disk}1"
         else # BIOS boot partition needed
             echo "n"    # Add a new partition
             echo ""     # Partition number (default: 1)
@@ -74,7 +76,6 @@ partition_the_disks() {
                     # Current type is 'Linux filesystem'
         echo "8200" # Hex code of GUID (default: 8300)
                     # Changed type of partition to 'Linux swap'
-        swap="${disk}2"
                     
         # Root partition
         echo "n"    # Add a new partition
@@ -84,7 +85,6 @@ partition_the_disks() {
                     # Current type is 'Linux filesystem'
         echo ""     # Hex code of GUID (default: 8300)
                     # Changed type of partition to 'Linux swap'
-        root="${disk}3"
 
         echo "w"    # Write table to disk and exit
         echo "y"
@@ -98,7 +98,7 @@ formatting_scripted=true
 
 # Formatting script. $UEFI is provided by the arch.sh
 format_the_partitions() {
-    if [ "$boot" != "" ] ; then
+    if [ "$UEFI" = true ] ; then
         mkfs.fat -F32 /dev/sda1
     fi
     echo ""
@@ -114,12 +114,11 @@ mounting_scripted=true
 
 # Mounting script.
 mount_the_partitions() {
-    root_dir="/mnt"
-    mount $root $root_dir
-    if [ "$boot" != "" ] ; then
-        boot_dir="$root_dir/boot"
-        mkdir -p "$boot_dir"
-        mount $boot $boot_dir
+    mount /dev/sda3 /mnt
+    if [ "$UEFI" = true ] ; then
+        boot_dir=/mnt/boot
+        mkdir -p $boot_dir
+        mount /dev/sda1 $boot_dir
     fi
 }
 

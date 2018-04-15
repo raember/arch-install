@@ -229,7 +229,7 @@ partition_disks() {
     print_section "Partition the disks"
     if [ "$partitioning_scripted" = true ] ; then
         print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd partition_the_disks success
+        print_cmd "partition_the_disks" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
         print_status "Waiting for the changes to take effect..."
         sleep 2s
@@ -257,7 +257,7 @@ format_partitions() {
     print_section "Format the partitions"
     if [ "$formatting_scripted" = true ] ; then
         print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd format_the_partitions success
+        print_cmd "format_the_partitions" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
         print_status "Waiting for the changes to take effect..."
         sleep 2s
@@ -279,7 +279,8 @@ format_partitions() {
 mount_file_systems() {
     print_section "Mount the file systems"
     if [ "$mounting_scripted" = true ] ; then
-        print_cmd mount_the_partitions success
+        print_check_file "/sys/firmware/efi/efivars" UEFI
+        print_cmd "mount_the_partitions" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
         print_status "Waiting for the changes to take effect..."
         sleep 2s
