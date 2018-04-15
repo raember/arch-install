@@ -213,7 +213,7 @@ git_dir="$home/Dokumente/git"
 # default: (skip)
 dotfiles_git="https://raember@github.com/raember/dotfiles.git"
 dotfiles_dir="$home/dotfiles"
-dotfiles_install="./install.sh"
+dotfiles_install="" # Handle installation manually
 
 # Folders to create
 directories=(
@@ -222,6 +222,9 @@ directories=(
     "$home/Bilder/wallpaper"
     "$home/Musik"
     "$home/Video"
+    "$home/Dokumente"
+    "$home/.bin"
+    "$home/.config/{bspwm,sxhkd,polybar}"
 )
 
 # AUR Helper
@@ -254,7 +257,7 @@ numlock=true
 # default: omit
 packages=(
     # WM
-    bspwm sxhkd xdo xorg
+    bspwm sxhkd xdo xorg xorg-xinit
 
     # Terminal & tools
     rxvt-unicode
@@ -345,21 +348,19 @@ aur_packages=(
     ttf-google-fonts-git
 
     # Other
-    polybar-git
+    polybar
     firefox-extension-stylish
     jsawk-git
     enpass-bin
     neofetch
     jdk jdk8 jdk9 jdk-devel
     nordnm
+    python-pywal
 )
 # Script to run after the installation.
 # Used to setup installed packages
 aftermath() {
     # bspwm
-    mkdir -p $home/.config/{bspwm,sxkhd}
-    cp /usr/share/doc/bspwm/examples/bspwmrc $home/.config/bspwm/bspwmrc
-    cp /usr/share/doc/bspwm/examples/sxkhdrc $home/.config/sxkhd/sxkhdrc
     echo "exec bspwm" > $home/.xinitrc
 
     # powerline
@@ -383,6 +384,11 @@ aftermath() {
     # cups
     sudo systemctl enable org.cups.cupsd.service
     sudo systemctl start org.cups.cupsd.service
+
+    cd $home/Bilder/wallpaper
+    wget https://wallpapers.wallhaven.cc/wallpapers/full/wallhaven-557971.jpg
+    wal -i *
+    cd -
 
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 }

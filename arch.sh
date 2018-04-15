@@ -656,7 +656,7 @@ prepare() {
         print_cmd_invisible "$program --version" success
         if [ "$success" = false ] ; then
             print_status "${format_code}$program${format_no_code} was missing. Installing now..."
-            print_cmd "pacman -S --color=always $program" success
+            print_cmd "sudo pacman -S --color=always $program" success
             [ "$success" = false ] && print_fail "Couldn't install $program"
         fi
     done
@@ -736,8 +736,10 @@ post_installation() {
         [ "$success" = false ] && print_fail "Failed"
         print_cmd_invisible "cd '$dotfiles_dir'" success
         [ "$success" = false ] && print_fail "Failed"
-        print_cmd "'$dotfiles_install'" success
-        [ "$success" = false ] && print_fail "Failed"
+        if [ "$dotfiles_install" != "" ] ; then
+            print_cmd "'$dotfiles_install'" success
+            [ "$success" = false ] && print_fail "Failed"
+        fi
     fi
     print_status "Running the aftermath script"
     print_cmd "aftermath" success
