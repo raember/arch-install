@@ -301,7 +301,8 @@ select_mirrors() {
         [ "$success" != true ] && print_fail "Failed"
         print_cmd_invisible "sed -i 's/^#Server/Server/' $mirrorlist.backup" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "rankmirrors -vn $mirror_count $mirrorlist.backup > $mirrorlist" success
+        sleep 1
+        print_cmd_invisible "rankmirrors -v $mirrorlist.backup > $mirrorlist" success
         [ "$success" != true ] && print_fail "Failed"
     fi
     if [ "$edit_mirrorlist" = "" ] ; then
@@ -375,9 +376,12 @@ chroot() {
     [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
     if [ "$copy_scripts_to_new_system" = true ] ; then
         for file in "${script_files[@]}"; do
+            [ -d $file ] || continue
             print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
+        print_status "Copying mirrorlist to new location"
+        print_cmd_invisible "cp '/etc/pacman.d/mirrorlist' '/mnt/etc/pacman.d/mirrorlist'" success
     fi
     print_status "    -> ${format_code}arch-chroot /mnt"
     print_status "    -> ${format_code}cd root; ./$(basename $0) -c${format_no_code}"
@@ -420,7 +424,7 @@ time_zone() {
         print_fail "Failed setting up the symbolic link"
     fi
     print_status "Generating ${format_code}/etc/adjtime${format_no_code}"
-    print_cmd "hwclock --systohc" success
+    print_cmd_invisible "hwclock --systohc" success
     if [ "$success" = true ] ; then
         print_pos "Finished generating ${format_code}/etc/adjtime${format_no_code}"
     else
@@ -445,7 +449,7 @@ locale() {
         file="/etc/locale.gen"
         [ "$test" = true ] && file="/dev/null"
         locales_list=$(printf "\n%s" "${locales[@]}")
-        print_cmd_invisible "echo '$locales_list'" success
+        print_cmd_invisible "echo '$locales_list' > $file" success
         if [ "$success" = true ] ; then
             print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
         else
@@ -646,6 +650,7 @@ prepare() {
             print_cmd_invisible "cp './$file' '$home/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
+        [ "$success" != true ] && print_fail "Couldn't copy mirrorlist"
         print_cmd_invisible "chown $username:$username '$home' -R" success
         [ "$success" != true ] && print_fail "Failed"
         print_status "Changing directory to new location"
@@ -708,7 +713,8 @@ num_lock_activation() {
     if [ "$numlock" = true ] ; then
         package="systemd-numlockontty"
         print_status "Adding package ${format_code}$package${format_no_code}"
-        aur_packages+=("systemd-numlockontty")
+        print_cmd "$aur_helper --color=always -S systemd-numlockontty" success
+        [ "$success" = false ] && print_neg "Failed"
     fi
     print_end
 }
