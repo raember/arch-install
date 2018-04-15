@@ -129,6 +129,8 @@ mount_the_partitions() {
 #### Select the mirrors
 # default: (asks)
 rank_by_speed=true
+# 0 = all
+mirror_count=50
 
 # default: (asks)
 edit_mirrorlist=true

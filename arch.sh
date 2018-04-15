@@ -231,8 +231,6 @@ partition_disks() {
         print_check_file "/sys/firmware/efi/efivars" UEFI
         print_cmd "partition_the_disks" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "Waiting for the changes to take effect..."
-        sleep 2s
     else
         print_status "Listing all block devices..."
         print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
@@ -259,8 +257,6 @@ format_partitions() {
         print_check_file "/sys/firmware/efi/efivars" UEFI
         print_cmd "format_the_partitions" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "Waiting for the changes to take effect..."
-        sleep 2s
     else
         print_status "Listing all block devices..."
         print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
@@ -282,8 +278,6 @@ mount_file_systems() {
         print_check_file "/sys/firmware/efi/efivars" UEFI
         print_cmd "mount_the_partitions" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "Waiting for the changes to take effect..."
-        sleep 2s
     else
         print_status "Listing all block devices..."
         print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
@@ -301,19 +295,20 @@ mount_file_systems() {
 # 7
 select_mirrors() {
     print_section "Select the mirrors"
+    mirrorlist="/etc/pacman.d/mirrorlist"
     if  [ "$rank_by_speed" = true ] ; then
-        print_cmd_invisible "cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup" success
+        print_cmd_invisible "cp $mirrorlist $mirrorlist.backup" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist.backup.enabled" success
+        print_cmd_invisible "sed -i 's/^#Server/Server/' $mirrorlist.backup" success
         [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "rankmirrors /etc/pacman.d/mirrorlist.backup.enabled > /etc/pacman.d/mirrorlist" success
+        print_cmd_invisible "rankmirrors -vn $mirror_count $mirrorlist.backup > $mirrorlist" success
         [ "$success" != true ] && print_fail "Failed"
     fi
     if [ "$edit_mirrorlist" = "" ] ; then
         print_prompt_boolean "Do you want to edit the mirrorlist?" "y" edit_mirrorlist
     fi
     if [ "$edit_mirrorlist" = true ] ; then
-        print_cmd "vim /etc/pacman.d/mirrorlist" success
+        print_cmd "vim $mirrorlist" success
         if [ "$success" = true ] ; then
             print_pos  "Finished editing mirrorlist"
         else
