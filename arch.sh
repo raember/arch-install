@@ -301,9 +301,12 @@ select_mirrors() {
         [ "$success" != true ] && print_fail "Failed"
         print_cmd_invisible "sed -i 's/^#Server/Server/' $mirrorlist.backup" success
         [ "$success" != true ] && print_fail "Failed"
-        sleep 1
-        print_cmd_invisible "rankmirrors -v $mirrorlist.backup > $mirrorlist" success
-        [ "$success" != true ] && print_fail "Failed"
+        print_status "Please edit the mirrorlist and sort it yourself using the following command:"
+        print_status "    $ ${format_code}cd /etc/pacman.d${format_no_code}"
+        print_status "    $ ${format_code}vim mirrorlist.backup${format_no_code}"
+        print_status "    $ ${format_code}rankmirrors -v mirrorlist.backup > mirrorlist${format_no_code}"
+        print_status "You can add the ${format_code}-n N${format_no_code} flag to specify the number of mirrors to output"
+        sub_shell
     fi
     if [ "$edit_mirrorlist" = "" ] ; then
         print_prompt_boolean "Do you want to edit the mirrorlist?" "y" edit_mirrorlist

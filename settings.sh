@@ -44,10 +44,6 @@ ping_address="archlinux.org"
 partitioning_scripted=true
 
 # Partitioning script. $UEFI is provided by the arch.sh
-disk="/dev/sda"
-boot="${disk}1"
-swap="${disk}2"
-root="${disk}3"
 partition_the_disks() {
     (
         if [ "$UEFI" = true ] ; then # EFI partition needed
@@ -58,21 +54,13 @@ partition_the_disks() {
                         # Current type is 'Linux filesystem'
             echo "EF00" # Hex code of GUID (default: 8300)
                         # Changed type of partition to 'EFI system'
-        else # BIOS boot partition needed
-            echo "n"    # Add a new partition
-            echo ""     # Partition number (default: 1)
-            echo ""     # First sector (default: 2048)
-            echo "+1M"  # Last sector (default: (max))
-                        # Current type is 'Linux filesystem'
-            echo "EF02" # Hex code of GUID (default: 8300)
-                        # Changed type of partition to 'BIOS boot partition'
         fi
 
         # Swap partition
         echo "n"    # Add a new partition
         echo ""     # Partition number (default: 1)
         echo ""     # First sector (default: x)
-        echo "+4G"  # Last sector (default: (max))
+        echo "+10G"  # Last sector (default: (max))
                     # Current type is 'Linux filesystem'
         echo "8200" # Hex code of GUID (default: 8300)
                     # Changed type of partition to 'Linux swap'
@@ -88,7 +76,7 @@ partition_the_disks() {
 
         echo "w"    # Write table to disk and exit
         echo "y"
-    ) | gdisk $disk
+    ) | gdisk /dev/sda
 }
 
 #### Format the partitions
@@ -100,11 +88,14 @@ formatting_scripted=true
 format_the_partitions() {
     if [ "$UEFI" = true ] ; then
         mkfs.fat -F32 /dev/sda1
+        mkswap /dev/sda2
+        swapon /dev/sda2
+        mkfs.ext4 /dev/sda3
+    else
+        mkswap /dev/sda1
+        swapon /dev/sda1
+        mkfs.ext4 /dev/sda2
     fi
-    echo ""
-    mkswap /dev/sda2
-    swapon /dev/sda2
-    mkfs.ext4 /dev/sda3
 }
 
 #### Mount the file systems
@@ -114,11 +105,12 @@ mounting_scripted=true
 
 # Mounting script.
 mount_the_partitions() {
-    mount /dev/sda3 /mnt
     if [ "$UEFI" = true ] ; then
-        boot_dir=/mnt/boot
-        mkdir -p $boot_dir
-        mount /dev/sda1 $boot_dir
+        mount /dev/sda3 /mnt
+        mkdir -p /mnt/boot
+        mount /dev/sda1 /mnt/boot
+    else
+        mount /dev/sda2 /mnt
     fi
 }
 
