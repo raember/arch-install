@@ -379,7 +379,7 @@ chroot() {
     [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
     if [ "$copy_scripts_to_new_system" = true ] ; then
         for file in "${script_files[@]}"; do
-            [ -d $file ] || continue
+            [ ! -f $file ] && continue
             print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
