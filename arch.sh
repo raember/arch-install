@@ -276,7 +276,7 @@ mount_file_systems() {
     print_section "Mount the file systems"
     if [ "$mounting_scripted" = true ] ; then
         print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd "mount_the_partitions" success
+        print_cmd_invisible "mount_the_partitions" success
         [ "$success" = false ] && print_fail "Something went horribly wrong"
     else
         print_status "Listing all block devices..."
