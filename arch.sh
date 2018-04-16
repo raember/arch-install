@@ -451,13 +451,11 @@ locale() {
     else
         file="/etc/locale.gen"
         [ "$test" = true ] && file="/dev/null"
-        locales_list=$(printf "\n%s" "${locales[@]}")
-        print_cmd_invisible "echo '$locales_list' > $file" success
-        if [ "$success" = true ] ; then
-            print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
-        else
-            print_fail "Failed writing the locales"
-        fi
+        for new_locale in "${locales[@]}"; do
+            print_cmd_invisible "echo '$new_locale' >> $file" success
+            [ "$success" != true ] && print_fail "Failed"
+        done
+        print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
     fi
     print_status "Generating localizations"
     print_cmd "locale-gen" success
@@ -508,12 +506,13 @@ hostname() {
     fi
     print_status "Setting up hosts file"
     file="/etc/hosts"
-    [ "$test" = true ] && file="/dev/null"
-    print_cmd_invisible "echo -e '127.0.0.1	localhost\n::1		localhost\n127.0.1.1	$hostname.localdomain	$hostname' >> $file" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished setting up hosts file"
-    else
-        print_fail "Failed setting up hosts file"
+    if [ "$hosts_redirects" != "" ] ; then
+        [ "$test" = true ] && file="/dev/null"
+        for redirect in "${hosts_redirects[@]}"; do
+            print_cmd_invisible "echo '$redirect' >> $file" success
+            [ "$success" != true ] && print_fail "Failed"
+        done
+        [ "$success" = true ] && print_pos "Finished setting up hosts file"
     fi
     print_end
 }
