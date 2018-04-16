@@ -4,7 +4,12 @@ source settings.sh
 
 source format.sh
 
-script_files=("arch.sh" "arch_hist" "format.sh" "settings.sh")
+script_files=(
+    "arch.sh"
+    "arch_hist"
+    "format.sh"
+    "settings.sh"
+)
 
 main() {
     case $RESUME in
@@ -379,7 +384,7 @@ chroot() {
     [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
     if [ "$copy_scripts_to_new_system" = true ] ; then
         for file in "${script_files[@]}"; do
-            [ ! -f $file ] && continue
+            [ -f $file ] && continue
             print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
             [ "$success" != true ] && print_fail "Couldn't copy file $file"
         done
@@ -387,7 +392,8 @@ chroot() {
         print_cmd_invisible "cp '/etc/pacman.d/mirrorlist' '/mnt/etc/pacman.d/mirrorlist'" success
     fi
     print_status "    -> ${format_code}arch-chroot /mnt"
-    print_status "    -> ${format_code}cd root; ./$(basename $0) -c${format_no_code}"
+    print_status "    -> ${format_code}cd${format_no_code}"
+    print_status "    -> ${format_code}./$(basename $0) -c${format_no_code}"
     print_end
     exit 0
 }

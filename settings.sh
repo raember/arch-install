@@ -53,7 +53,15 @@ partition_the_disks() {
             echo "+550M" # Last sector (default: (max))
                         # Current type is 'Linux filesystem'
             echo "EF00" # Hex code of GUID (default: 8300)
-                        # Changed type of partition to 'EFI system'
+                        # Changed type of partition to 'EFI system''
+        else # BIOS boot partition needed
+            echo "n"    # Add a new partition
+            echo ""     # Partition number (default: 1)
+            echo ""     # First sector (default: 2048)
+            echo "+1M"  # Last sector (default: (max))
+                        # Current type is 'Linux filesystem'
+            echo "EF02" # Hex code of GUID (default: 8300)
+                        # Changed type of partition to 'BIOS boot partition'
         fi
 
         # Swap partition
@@ -92,9 +100,9 @@ format_the_partitions() {
         swapon /dev/sda2
         mkfs.ext4 /dev/sda3
     else
-        mkswap /dev/sda1
-        swapon /dev/sda1
-        mkfs.ext4 /dev/sda2
+        mkswap /dev/sda2
+        swapon /dev/sda2
+        mkfs.ext4 /dev/sda3
     fi
 }
 
