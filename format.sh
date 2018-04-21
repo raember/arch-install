@@ -40,7 +40,7 @@ font_bold="\033[1m"
 font_blink="\033[5m"
 font_reverse="\033[7m"
 
-font_no_bold="\033[22m"
+font_no_bold="\033[21m"
 font_no_blink="\033[25m"
 font_no_reverse="\033[27m"
 
