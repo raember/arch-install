@@ -458,8 +458,7 @@ locale() {
         file="/etc/locale.gen"
         [ "$test" = true ] && file="/dev/null"
         for new_locale in "${locales[@]}"; do
-            print_cmd_invisible "echo '$new_locale' >> $file" success
-            [ "$success" != true ] && print_fail "Failed"
+            echo "$new_locale" >> $file
         done
         print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
     fi
@@ -515,8 +514,7 @@ hostname() {
     if [ "$hosts_redirects" != "" ] ; then
         [ "$test" = true ] && file="/dev/null"
         for redirect in "${hosts_redirects[@]}"; do
-            print_cmd_invisible "echo '$redirect' >> $file" success
-            [ "$success" != true ] && print_fail "Failed"
+            echo "$redirect" >> $file
         done
         [ "$success" = true ] && print_pos "Finished setting up hosts file"
     fi

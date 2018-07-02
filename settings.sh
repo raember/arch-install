@@ -353,7 +353,7 @@ aur_packages=(
     
     # Fonts
     all-repository-fonts
-    ttf-google-fonts-git
+    #ttf-google-fonts-git
 
     # Other
     polybar
@@ -370,6 +370,8 @@ aur_packages=(
 aftermath() {
     # bspwm
     echo "exec bspwm" > $home/.xinitrc
+    cp /usr/share/doc/bspwm/example/bspwmrc $home/.config/bspwm/
+    cp /usr/share/doc/bspwm/example/sxhkdrc $home/.config/sxhkd/
 
     # powerline
     echo -e "powerline-daemon -q\n. /usr/lib/python3.6/site-packages/powerline/bindings/zsh/powerline.zsh" >> .zshrc

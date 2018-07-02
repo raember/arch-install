@@ -1,0 +1,3 @@
+[submodule "bashme"]
+	path = bashme
+	url = https://raember@github.com/raember/bash-me.git
