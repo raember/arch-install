@@ -2,231 +2,280 @@
 
 source settings.sh
 
-source format.sh
+source bashme/bashme
+
+# Basic settings
+loglevel=$LL_INFO
+log2file=1
+
+# Setup:
+PROGRAM_NAME="${BOLD}Arch Install Script${RESET}"
+VERSION="${FG_GREEN}v0.2${RESET}"
+YEAR=2018
+FULL_NAME="Raphael Emberger"
+LICENCE=$(cat LICENSE)
+EXPLANATION='Installer script for Arch Linux.
+BTW: I uSe ArCh.'
+USAGE=(
+  '[OPTION]...    Execute script with arguments.'
+  '               Show this help page.'
+)
+define_opt '_help'  '-h' '--help'      ''  'Display this help text.'
+define_opt '_ver'   '-v' '--version'   ''  'Display the VERSION.'
+define_opt 'resume' '-r' '--resume-at' 'n' "Resume script at entry point ${ITALIC}n${RESET}."
+DESCRIPTION="This script simplifies the installation of Arch Linux. it can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
+As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
+BTW: I uSe ArCh."
+
+# Parse arguments
+parse_args "$@"
+
+# Process options
+[[ -n "$_help" ]] || [[ -z ${BASH_ARGC[@]} ]] && print_usage && exit
+[[ -n "$_ver" ]] && print_version && exit
+
+# Create a lock file
+#lock
+
+# Setup traps
+traps+=(EXIT)
+sig_err() {
+  error "An error occurred(SIGERR)."
+  exit;
+}
+sig_int() {
+  error "Canceled by user(SIGINT)."
+  exit;
+}
+sig_exit() {
+  info "Ending script(SIGEXIT). Cleaning up."
+  unlock
+}
+trap_signals
 
 script_files=(
-    "arch.sh"
-    "arch_hist"
-    "format.sh"
-    "settings.sh"
+  "arch.sh"
+  "arch.sh.log"
+  "arch_hist"
+  "format.sh"
+  "settings.sh"
 )
 
 main() {
-    case $RESUME in
-    0)
-        print_part "Pre-installation"
-        set_keyboard_layout
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    1)
-        verify_boot_mode
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    2)
-        connect_to_internet
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    3)
-        update_system_clock
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    4)
-        partition_disks
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    5)
-        format_partitions
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    6)
-        mount_file_systems
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    7)
-        print_part "Installation"
-        select_mirrors
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    8)
-        install_base_packages
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    9)
-        print_part "Configure the system"
-        fstab
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    10)
-        chroot
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    11)
-        time_zone
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    12)
-        locale
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    13)
-        hostname
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    14)
-        network_configuration
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    15)
-        initramfs
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    16)
-        root_password
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    17)
-        boot_loader
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    18)
-        print_part "Package-Installation & Constomization"
-        prepare
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    19)
-        aur_helper
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    20)
-        num_lock_activation
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    21)
-        install_packages
-        ((INDEX++))
-        [ "$post_prompt" = true ] && read
-        ;&
-    22)
-        print_part "Post-Installation"
-        post_installation
-        ;;
-    *)
-        print_neg "Resume index ${RESUME} is invalid. Highest index is 18."
-        exit 1
-        ;;
-    esac
+  case $resume in
+  0)
+    info "Pre-installation"
+    set_keyboard_layout
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  1)
+    verify_boot_mode
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  2)
+    connect_to_internet
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  3)
+    update_system_clock
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  4)
+    partition_disks
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  5)
+    format_partitions
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  6)
+    mount_file_systems
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  7)
+    info "Installation"
+    select_mirrors
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  8)
+    install_base_packages
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  9)
+    info "Configure the system"
+    fstab
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  10)
+    chroot
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  11)
+    time_zone
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  12)
+    locale
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  13)
+    hostname
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  14)
+    network_configuration
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  15)
+    initramfs
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  16)
+    root_password
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  17)
+    boot_loader
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  18)
+    info "Package-Installation & Constomization"
+    prepare
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  19)
+    aur_helper
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  20)
+    num_lock_activation
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  21)
+    install_packages
+    ((INDEX++))
+    [ "$post_prompt" = true ] && read
+    ;&
+  22)
+    info "Post-Installation"
+    post_installation
+    ;;
+  *)
+    fatal "Resume index ${resume} is invalid. Highest index is 22."
+    exit $EX_MISSUSE
+    ;;
+  esac
 }
 # 0
 set_keyboard_layout() {
-    print_section "Set the keyboard layout"
-    print_status "Setting keyboard layout"
-    if [ $keyboard_layout == "" ] ; then
-        print_prompt "Please choose a keyboard layout:" "> "
+    info "[$INDEX]: Setting keyboard layout."
+    if [[ $keyboard_layout == "" ]] ; then
+        info "Please choose a keyboard layout:"
+        read answer
         keyboard_layout="$answer"
     fi
-    print_cmd_invisible "loadkeys $keyboard_layout" success
-    if [ "$success" = true ] ; then
-        print_pos "Set keyboard layout to ${format_variable}${keyboard_layout}"
+    loadkeys $keyboard_layout
+    if check_retval $?; then
+        info "Set keyboard layout to ${ITALIC}${keyboard_layout}${RESET}"
     else
-        print_fail "Couldn't load keyboard layout ${format_variable}${keyboard_layout}"
+        error "Couldn't load keyboard layout ${ITALIC}${keyboard_layout}${RESET}"
+        exit $EX_ERR
     fi
-    print_end
 }
 
 # 1
 verify_boot_mode() {
-    print_section "Verify the boot mode"
-    print_status "Checking if efivars exist"
-    print_check_file "/sys/firmware/efi/efivars" success
-    if [ "$success" = true ] ; then
-        print_status "UEFI is ${format_positive}enabled"
-    else
-        print_status "UEFI is ${format_negative}disabled"
-    fi
-    print_end
+  info "[$INDEX]: Verifying the boot mode."
+  debug "Checking if efivars exist."
+  if [ -f /sys/firmware/efi/efivars ] ; then
+    info "UEFI is enabled."
+  else
+    info "UEFI is disabled."
+  fi
 }
 
 # 2
 connect_to_internet() {
-    print_section "Connect to the Internet"
-    make_sure_internet_is_connected
-    print_end
+  info "[$INDEX]: Connect to the Internet"
+  make_sure_internet_is_connected
 }
 make_sure_internet_is_connected() {
-    print_status "Checking internet connectivity"
-    while : ; do
-        print_cmd "ping -q -c 1 $ping_address" success
-        if [ "$success" = true ] ; then
-            print_pos "Internet is up and running"
-            break;
-        else
-            print_neg "No active internet connection found"
-            print_sub "Please stop the running dhcpcd service with ${format_code}systemctl stop dhcpcd@${format_no_code} and pressing ${format_code}Tab${format_no_code}."
-            print_sub "Proceed with ${font_bold}Network configuration${font_no_bold}:"
-            print_sub "${font_link}https://wiki.archlinux.org/index.php/Network_configuration#Device_driver${font_no_link}"
-            print_sub "for ${font_bold}wired${font_no_bold} devices or ${font_bold}Wireless network configuration${font_no_bold}:"
-            print_sub "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration${font_no_link}"
-            print_sub "for ${font_bold}wireless${font_no_bold} devices"
-            sub_shell
-        fi
-    done
+  info "Checking internet connectivity."
+  while : ; do
+    debug "Pinging $ping_address."
+    ping -q -c 1 $ping_address &2> /dev/null
+    if check_retval $?; then
+      info "Internet is up and running"
+      break;
+    else
+      info "No active internet connection found"
+      info "Please stop the running dhcpcd service with ${ITALIC}systemctl stop dhcpcd@${RESET} and pressing ${format_code}Tab${format_no_code}.
+Proceed with ${BOLD}Network configuration${RESET}:
+${ITALIC}${UNDERLINE}https://wiki.archlinux.org/index.php/Network_configuration#Device_driver${RESET}
+for ${BOLD}wired${RESET} devices or ${font_bold}Wireless network configuration${RESET}:
+${ITALIC}${UNDERLINE}https://wiki.archlinux.org/index.php/Wireless_network_configuration${RESET}
+for ${BOLD}wireless${RESET} devices.
+Then resume this script with ${ITALIC}-r $INDEX${RESET}."
+      exit $EX_OK
+    fi
+  done
 }
 
 # 3
 update_system_clock() {
-    print_section "Update the system clock"
-    print_status "Enabling NTP synchronization"
-    print_cmd_invisible "timedatectl set-ntp true" success
-    if [ "$success" = true ] ; then
-        print_pos "NTP has been enabled"
-        if [[ $region != "" && $city != "" ]] ; then
-            print_status "Setting timezone based on locale settings"
-            print_cmd_invisible "timedatectl set-timezone $region/$city" success
-            if [ "$success" = true ] ; then
-                print_pos "Set the timezone successfully"
-            else
-                print_fail "Couldn't set the timezone"
-            fi
-        fi
-        print_status "Waiting for the changes to take effect..."
-        sleep 2s
-        print_status "Please check if the time has been set correctly:"
-        print_cmd "timedatectl status" success
-        if [ "$success" = true ] ; then
-            print_prompt_boolean "Is the displayed time correctly set up?" "y" answer
-            if [ "$answer" = false ] ; then
-                print_status "Please set up the time yourself and then return to the setup"
-                print_end
-                exit 0;
-            fi
-        else
-            print_fail "Something went horribly wrong"
-        fi
-    else
-        print_neg "Couldn't enable NTP"
+  info "[$INDEX]: Update the system clock"
+  info "Enabling NTP synchronization"
+  timedatectl set-ntp true &2> /dev/null
+  if check_retval $?; then
+    info "NTP has been enabled"
+    if [[ $region != "" && $city != "" ]] ; then
+      info "Setting timezone based on locale settings"
+      timedatectl set-timezone $region/$city &2> /dev/null
+      if check_retval $?; then
+        info "Set the timezone successfully"
+      else
+        info "Couldn't set the timezone"
+      fi
     fi
-    print_end
+    info "Waiting for the changes to take effect..."
+    sleep 1s
+    info "Please check if the time has been set correctly:"
+    timedatectl status
+    if check_retval $?; then
+      print_prompt_boolean "Is the displayed time correctly set up?" "y" answer
+      if [ "$answer" = false ] ; then
+        info "Please set up the time yourself and then return to the setup"
+        exit 0;
+      fi
+    else
+      fatal "Something went horribly wrong"
+      exit $EX_ERR
+    fi
+  else
+    fatal "Couldn't enable NTP"
+    exit $EX_ERR
+  fi
 }
 
 # 4
@@ -787,13 +836,12 @@ help() {
 	echo -e " -h\t\tShow this help text"
 }
 
-RESUME=0
 while getopts "r:c" arg; do
 	case $arg in
 		r) # Resume setup
-			RESUME=$OPTARG;;
+			resume=$OPTARG;;
         c) # Resume from inside chroot
-            RESUME=11;;
+            resume=11;;
 		h) # Help
 			help
 			exit 0;;
@@ -802,7 +850,7 @@ while getopts "r:c" arg; do
 			exit 1;;
 	esac
 done
-INDEX=$RESUME
+INDEX=$resume
 
 # Start script
 main
