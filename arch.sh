@@ -49,8 +49,6 @@ sig_int() {
   exit;
 }
 sig_exit() {
-  read
-  tput rmcup
   info "Ending script(SIGEXIT). Cleaning up."
   unlock
 }
@@ -64,65 +62,69 @@ script_files=(
   "settings.sh"
 )
 
+declare -i x=4
+
 main() {
+  declare_stack suggestion
+  local -i number=1
   while : ; do
     tput clear
     declare -i left
     declare -i top
-    draw_border $BG_LBLUE
     print_title "Arch Linux Installation"
-    enumerate_options "Pre-Installation" \
+    enumerate_options "Quit" \
+                "Pre-Installation" \
                 "Installation" \
                 "Configure the system" \
                 "Reboot" \
                 "Post-Installation"
     while : ; do
-      read_answer "Enter option (1): " answer 1
+      read_answer "Enter option [$number]: " answer $number
       case "$answer" in
+        0)
+          return
+          ;;
         1)
+          push suggestion 2
           pre_installation
-          break
           ;;
         2)
+          push suggestion 3
+          NYI
           installation
-          break
           ;;
         3)
+          push suggestion 4
+          NYI
           configure_the_system
           break
           ;;
         4)
+          push suggestion 5
+          NYI
           reboot
-          break
           ;;
         5)
+          push suggestion 0
+          NYI
           post_installation
-          break
           ;;
         *)
           ((top--))
           tput cup $((top+1)) $left
           error "Please choose an option from above."
           tput cup $top $left
+          continue
           ;;
       esac
+      pause
+      break
     done
+    pop suggestion number
   done
 }
 function pause() {
     [[ -n "$post_prompt" ]] && read
-}
-function draw_border() {
-  return
-  trace "Drawing border."
-  tput cup 0 0
-  printf '%s' "$1"
-  printf "%$(($(tput cols)-1))s" " "
-  printf '%s' "$RESET"
-  for ((i=0;i<=$(tput lines);i++)); do
-    printf '%s' "${1}  ${RESET}"
-    tput cup $i 0
-  done
 }
 function print_title() {
   left=4
@@ -135,13 +137,13 @@ function print_title() {
   tput cup $top $left
 }
 function enumerate_options() {
-  local -i i
+  local -i i=0
   local option
   for option in "$@"; do
-    ((i++))
     tput cup $top $left
     echo "$i) $option"
     trace "Printed option number $i: '$option' at ($top, $left)"
+    ((i++))
     ((top++))
   done
   ((top++))
@@ -186,68 +188,74 @@ function read_answer() {
 
 
 function pre_installation() {
+  local -i number=1
   while : ; do
     tput clear
-    draw_border $BG_LBLUE
     print_title "Pre-Installation"
-    enumerate_options "Set the keyboard layout" \
+    enumerate_options "Return to Main" \
+                "Set the keyboard layout" \
                 "Verify the boot mode" \
                 "Connect to the Internet" \
                 "Update the system clock" \
                 "Partition the disks" \
                 "Format the partitions" \
-                "Mount the file systems" \
-                "Return to Main"
+                "Mount the file systems"
     while : ; do
-      read_answer "Enter option (1): " answer 1
+      read_answer "Enter option [$number]: " answer $number
       case "$answer" in
+        0)
+          return
+          ;;
         1)
+          push suggestion 2
           set_keyboard_layout
-          break
           ;;
         2)
+          push suggestion 3
           verify_boot_mode
-          break
           ;;
         3)
-          connect_to_internet
-          break
+          push suggestion 4
+          connect_to_the_internet
           ;;
         4)
-          update_system_clock
-          break
+          push suggestion 5
+          update_the_system_clock
           ;;
         5)
+          push suggestion 6
+          NYI
           partition_the_disks
-          break
           ;;
         6)
+          push suggestion 7
+          NYI
           format_the_partitions
-          break
           ;;
         7)
+          push suggestion 0
+          NYI
           mount_file_systems
-          break
-          ;;
-        8)
-          return
           ;;
         *)
           ((top--))
           tput cup $((top+1)) $left
           error "Please choose an option from above."
           tput cup $top $left
+          continue
           ;;
       esac
+      pause
+      break
     done
+    pop suggestion number
   done
 }
 
-# 0
+# 1
 set_keyboard_layout() {
   while : ; do
     tput clear
-    draw_border $BG_LBLUE
     print_title "Set the keyboard layout"
     if [[ -z "$keyboard_layout" ]]; then
       local -a options=($(ls /usr/share/kbd/keymaps/**/*.map.gz | grep -oE '[^/]*$' | sed 's/\.map\.gz//g'))
@@ -256,51 +264,46 @@ set_keyboard_layout() {
     fi
     info "Setting keyboard layout to '$keyboard_layout'."
     loadkeys $keyboard_layout
-    if check_retval $?; then
-      break;
-    fi
+    check_retval $? && break
     warn "Couldn't set the keyboard layout."
+    keyboard_layout=""
   done
   pause
   while : ; do
     tput clear
-    draw_border $BG_LBLUE
     print_title "Set the keyboard layout(Console font)"
     if [[ -z "$console_font" ]]; then
-      local -a options=($(ls /usr/share/kbd/consolefonts | sed 's/\(\.fnt|\.psfu|\.psf|\)\.gz//g'))
+      local -a options=($(ls /usr/share/kbd/consolefonts))
       list_options
       echo "Write 'cycle' to test each font."
       read_answer "Enter option (default8x16): " console_font default8x16
       if [[ "$console_font" == "cycle" ]]; then
         for consfnt in "${options[@]}"; do
           tput clear
+          setfont $consfnt
           print_title "Font: $consfnt"
-          local -a lines=($(showconsolefont))
-          for line in "${lines[@]}"; do
-            tput cup $top $left
-            printf '%s' "$line"
-            ((top++))
-          done
+          showconsolefont
+          top=$((top+19))
           tput cup $top $left
           echo "Lorem ipsum dolor sit amet."
-          draw_border $BG_LBLUE
           read
         done
+        setfont
         continue
       fi
     fi
     info "Setting console font to '$console_font'."
     setfont $console_font
-    if check_retval $?; then
-      break;
-    fi
+    check_retval $? && break
     warn "Couldn't set the console font."
+    console_font=""
   done
 }
 
-# 1
+# 2
 verify_boot_mode() {
-  info "[$INDEX]: Verifying the boot mode."
+  tput clear
+  print_title "Verifying the boot mode"
   debug "Checking if efivars exist."
   if [ -f /sys/firmware/efi/efivars ] ; then
     info "UEFI is enabled."
@@ -309,20 +312,24 @@ verify_boot_mode() {
   fi
 }
 
-# 2
-connect_to_internet() {
-  info "[$INDEX]: Connect to the Internet"
+# 3
+connect_to_the_internet() {
+  tput clear
+  print_title "Connect to the Internet"
   make_sure_internet_is_connected
 }
 make_sure_internet_is_connected() {
   info "Checking internet connectivity."
+  [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
   while : ; do
     debug "Pinging $ping_address."
-    ping -q -c 1 $ping_address &2> /dev/null
+    ping -c 1 $ping_address | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
     if check_retval $?; then
+      tput hpa $x
       info "Internet is up and running"
       break;
     else
+      tput hpa $x
       info "No active internet connection found"
       info "Please stop the running dhcpcd service with ${ITALIC}systemctl stop dhcpcd@${RESET} and pressing ${format_code}Tab${format_no_code}.
 Proceed with ${BOLD}Network configuration${RESET}:
@@ -337,33 +344,42 @@ Then resume this script with ${ITALIC}-r $INDEX${RESET}."
 }
 
 # 3
-update_system_clock() {
-  info "[$INDEX]: Update the system clock"
-  info "Enabling NTP synchronization"
-  timedatectl set-ntp true &2> /dev/null
+update_the_system_clock() {
+  tput clear
+  print_title "Update the system clock"
+  tput hpa $x
+  info "Enabling NTP synchronization."
+  timedatectl set-ntp true | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
   if check_retval $?; then
-    info "NTP has been enabled"
     if [[ $region != "" && $city != "" ]] ; then
+      tput hpa $x
       info "Setting timezone based on locale settings"
-      timedatectl set-timezone $region/$city &2> /dev/null
+      timedatectl set-timezone $region/$city | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
       if check_retval $?; then
+        tput hpa $x
         info "Set the timezone successfully"
       else
+        tput hpa $x
         info "Couldn't set the timezone"
       fi
     fi
-    info "Waiting for the changes to take effect..."
+    tput hpa $x
+    trace "Waiting for the changes to take effect..."
     sleep 1s
+    tput hpa $x
     info "Please check if the time has been set correctly:"
-    timedatectl status
+    timedatectl status | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
     if check_retval $?; then
+      tput hpa $x
       info "If the displayed time is incorrect, please set it up yourself."
     else
+      tput hpa $x
       fatal "Something went horribly wrong"
       exit $EX_ERR
     fi
   else
-    fatal "Couldn't enable NTP"
+    tput hpa $x
+    fatal "Couldn't enable NTP synchronization."
     exit $EX_ERR
   fi
 }
@@ -943,5 +959,5 @@ done
 INDEX=$resume
 
 # Start script
-tput smcup
+#tput smcup # Not supported in liveISO
 main

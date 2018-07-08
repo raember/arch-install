@@ -24,13 +24,19 @@ post_prompt=1
 #
 #### Set the keyboard layout
 keyboard_layout="de_CH-latin1"
-#console_font="default8x16"
+console_font="Lat2-Terminus16.psfu.gz"
+# Sans-serif-fonts with only moderate eyecancer:
+# cybercafe.fnt.gz
+# gr928-8x16-thin.psfu.gz
+# greek-polytonic.psfu.gz
+# Lat2-Terminus16.psfu.gz
+# LatGrkCyr-8x16.psfu.gz
 
 #### Verify the boot mode
 # Nothing to change here
 
 #### Connect to the Internet
-# default: "archlinux.org"
+# default: "8.8.8.8"
 ping_address="archlinux.org"
 
 #### Update the system clock
