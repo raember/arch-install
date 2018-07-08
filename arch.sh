@@ -28,10 +28,11 @@ As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
 
 # Parse arguments
+declare -i resume=0
 parse_args "$@"
 
 # Process options
-[[ -n "$_help" ]] || [[ -z ${BASH_ARGC[@]} ]] && print_usage && exit
+[[ -n "$_help" ]] && print_usage && exit
 [[ -n "$_ver" ]] && print_version && exit
 
 # Create a lock file
@@ -48,6 +49,8 @@ sig_int() {
   exit;
 }
 sig_exit() {
+  read
+  tput rmcup
   info "Ending script(SIGEXIT). Cleaning up."
   unlock
 }
@@ -62,146 +65,237 @@ script_files=(
 )
 
 main() {
-  case $resume in
-  0)
-    info "Pre-installation"
-    set_keyboard_layout
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  1)
-    verify_boot_mode
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  2)
-    connect_to_internet
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  3)
-    update_system_clock
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  4)
-    partition_disks
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  5)
-    format_partitions
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  6)
-    mount_file_systems
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  7)
-    info "Installation"
-    select_mirrors
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  8)
-    install_base_packages
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  9)
-    info "Configure the system"
-    fstab
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  10)
-    chroot
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  11)
-    time_zone
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  12)
-    locale
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  13)
-    hostname
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  14)
-    network_configuration
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  15)
-    initramfs
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  16)
-    root_password
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  17)
-    boot_loader
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  18)
-    info "Package-Installation & Constomization"
-    prepare
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  19)
-    aur_helper
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  20)
-    num_lock_activation
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  21)
-    install_packages
-    ((INDEX++))
-    [ "$post_prompt" = true ] && read
-    ;&
-  22)
-    info "Post-Installation"
-    post_installation
-    ;;
-  *)
-    fatal "Resume index ${resume} is invalid. Highest index is 22."
-    exit $EX_MISSUSE
-    ;;
-  esac
+  while : ; do
+    tput clear
+    declare -i left
+    declare -i top
+    draw_border $BG_LBLUE
+    print_title "Arch Linux Installation"
+    enumerate_options "Pre-Installation" \
+                "Installation" \
+                "Configure the system" \
+                "Reboot" \
+                "Post-Installation"
+    while : ; do
+      read_answer "Enter option (1): " answer 1
+      case "$answer" in
+        1)
+          pre_installation
+          break
+          ;;
+        2)
+          installation
+          break
+          ;;
+        3)
+          configure_the_system
+          break
+          ;;
+        4)
+          reboot
+          break
+          ;;
+        5)
+          post_installation
+          break
+          ;;
+        *)
+          ((top--))
+          tput cup $((top+1)) $left
+          error "Please choose an option from above."
+          tput cup $top $left
+          ;;
+      esac
+    done
+  done
 }
+function pause() {
+    [[ -n "$post_prompt" ]] && read
+}
+function draw_border() {
+  return
+  trace "Drawing border."
+  tput cup 0 0
+  printf '%s' "$1"
+  printf "%$(($(tput cols)-1))s" " "
+  printf '%s' "$RESET"
+  for ((i=0;i<=$(tput lines);i++)); do
+    printf '%s' "${1}  ${RESET}"
+    tput cup $i 0
+  done
+}
+function print_title() {
+  left=4
+  top=2
+  local title="$1"
+  tput cup $top $left
+  echo "${FG_WHITE}${UNDERLINE}$1${RESET}"
+  trace "Printed title: '$1' at ($top, $left)"
+  top=$((top + 2))
+  tput cup $top $left
+}
+function enumerate_options() {
+  local -i i
+  local option
+  for option in "$@"; do
+    ((i++))
+    tput cup $top $left
+    echo "$i) $option"
+    trace "Printed option number $i: '$option' at ($top, $left)"
+    ((top++))
+  done
+  ((top++))
+}
+function list_options() {
+  local -i maxwidth=$(($(tput cols)-left-2))
+  local -i width=0
+  local first=1
+  local option
+  trace "Printing ${#options[@]} options."
+  for option in "${options[@]}"; do
+    width=$((width+${#option}+2))
+    if [[ -n "$first" ]]; then
+      first=""
+    else
+      printf '%s' ', '
+    fi
+    if ((width >= maxwidth)); then
+      ((top++))
+      tput cup $top $left
+      width=${#option}
+    fi
+    printf '%s' "$option"
+  done
+  ((top++))
+  ((top++))
+}
+function read_answer() {
+  debug "Reading answer."
+  tput cup $top $left
+  local _answer
+  tput dch $(($(tput cols)-left))
+  printf "$1"
+  read _answer
+  if [[ -n "$3" ]] && [[ -z "$_answer" ]]; then
+    _answer="$3"
+  fi
+  eval "$2='$_answer'"
+  debug "Read answer: $2='$(eval "echo "\$$2"")'"
+  ((top++))
+}
+
+
+function pre_installation() {
+  while : ; do
+    tput clear
+    draw_border $BG_LBLUE
+    print_title "Pre-Installation"
+    enumerate_options "Set the keyboard layout" \
+                "Verify the boot mode" \
+                "Connect to the Internet" \
+                "Update the system clock" \
+                "Partition the disks" \
+                "Format the partitions" \
+                "Mount the file systems" \
+                "Return to Main"
+    while : ; do
+      read_answer "Enter option (1): " answer 1
+      case "$answer" in
+        1)
+          set_keyboard_layout
+          break
+          ;;
+        2)
+          verify_boot_mode
+          break
+          ;;
+        3)
+          connect_to_internet
+          break
+          ;;
+        4)
+          update_system_clock
+          break
+          ;;
+        5)
+          partition_the_disks
+          break
+          ;;
+        6)
+          format_the_partitions
+          break
+          ;;
+        7)
+          mount_file_systems
+          break
+          ;;
+        8)
+          return
+          ;;
+        *)
+          ((top--))
+          tput cup $((top+1)) $left
+          error "Please choose an option from above."
+          tput cup $top $left
+          ;;
+      esac
+    done
+  done
+}
+
 # 0
 set_keyboard_layout() {
-    info "[$INDEX]: Setting keyboard layout."
-    if [[ $keyboard_layout == "" ]] ; then
-        info "Please choose a keyboard layout:"
-        read answer
-        keyboard_layout="$answer"
+  while : ; do
+    tput clear
+    draw_border $BG_LBLUE
+    print_title "Set the keyboard layout"
+    if [[ -z "$keyboard_layout" ]]; then
+      local -a options=($(ls /usr/share/kbd/keymaps/**/*.map.gz | grep -oE '[^/]*$' | sed 's/\.map\.gz//g'))
+      list_options
+      read_answer "Enter option (us): " keyboard_layout us
     fi
+    info "Setting keyboard layout to '$keyboard_layout'."
     loadkeys $keyboard_layout
     if check_retval $?; then
-        info "Set keyboard layout to ${ITALIC}${keyboard_layout}${RESET}"
-    else
-        error "Couldn't load keyboard layout ${ITALIC}${keyboard_layout}${RESET}"
-        exit $EX_ERR
+      break;
     fi
+    warn "Couldn't set the keyboard layout."
+  done
+  pause
+  while : ; do
+    tput clear
+    draw_border $BG_LBLUE
+    print_title "Set the keyboard layout(Console font)"
+    if [[ -z "$console_font" ]]; then
+      local -a options=($(ls /usr/share/kbd/consolefonts | sed 's/\(\.fnt|\.psfu|\.psf|\)\.gz//g'))
+      list_options
+      echo "Write 'cycle' to test each font."
+      read_answer "Enter option (default8x16): " console_font default8x16
+      if [[ "$console_font" == "cycle" ]]; then
+        for consfnt in "${options[@]}"; do
+          tput clear
+          print_title "Font: $consfnt"
+          local -a lines=($(showconsolefont))
+          for line in "${lines[@]}"; do
+            tput cup $top $left
+            printf '%s' "$line"
+            ((top++))
+          done
+          tput cup $top $left
+          echo "Lorem ipsum dolor sit amet."
+          draw_border $BG_LBLUE
+          read
+        done
+        continue
+      fi
+    fi
+    info "Setting console font to '$console_font'."
+    setfont $console_font
+    if check_retval $?; then
+      break;
+    fi
+    warn "Couldn't set the console font."
+  done
 }
 
 # 1
@@ -263,11 +357,7 @@ update_system_clock() {
     info "Please check if the time has been set correctly:"
     timedatectl status
     if check_retval $?; then
-      print_prompt_boolean "Is the displayed time correctly set up?" "y" answer
-      if [ "$answer" = false ] ; then
-        info "Please set up the time yourself and then return to the setup"
-        exit 0;
-      fi
+      info "If the displayed time is incorrect, please set it up yourself."
     else
       fatal "Something went horribly wrong"
       exit $EX_ERR
@@ -280,10 +370,10 @@ update_system_clock() {
 
 # 4
 partition_disks() {
-    print_section "Partition the disks"
-    if [ "$partitioning_scripted" = true ] ; then
-        print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd "partition_the_disks" success
+    info "[$INDEX]: Partition the disks"
+    if [[ -n "$partitioning_scripted" ]] ; then
+        [ -f /sys/firmware/efi/efivars ] && UEFI=1
+        partition_the_disks
         [ "$success" = false ] && print_fail "Something went horribly wrong"
     else
         print_status "Listing all block devices..."
@@ -853,4 +943,5 @@ done
 INDEX=$resume
 
 # Start script
+tput smcup
 main

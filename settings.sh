@@ -13,20 +13,18 @@
 # Determines whether packages for wlan will be asked to be installed or not_____
 platform="laptop"
 
-# Fancy styling(default: true)
-fancy=true
+# Fancy styling(default: 1)
+fancy=1
 
-# Prompt after every part(default: false)
-post_prompt=true
+# Prompt after every part(default: "")
+post_prompt=1
 
 ####################################################################################################
 #   Pre-Installation
 #
 #### Set the keyboard layout
-# Available keyboard layouts can be found with
-#   $ ls /usr/share/kbd/keymaps/**/*.map.gz
-# default: (asks)
 keyboard_layout="de_CH-latin1"
+#console_font="default8x16"
 
 #### Verify the boot mode
 # Nothing to change here
@@ -41,12 +39,12 @@ ping_address="archlinux.org"
 #### Partition the disks
 # Use seperate script to partition the disks automatically
 # default: (asks user to partition the disks manually)
-partitioning_scripted=true
+partitioning_scripted=1
 
 # Partitioning script. $UEFI is provided by the arch.sh
 partition_the_disks() {
     (
-        if [ "$UEFI" = true ] ; then # EFI partition needed
+        if [[ -n "$UEFI" ]] ; then # EFI partition needed
             echo "n"    # Add a new partition
             echo ""     # Partition number (default: 1)
             echo ""     # First sector (default: 2048)
@@ -94,7 +92,7 @@ formatting_scripted=true
 
 # Formatting script. $UEFI is provided by the arch.sh
 format_the_partitions() {
-    if [ "$UEFI" = true ] ; then
+    if [[ -n "$UEFI" ]] ; then
         mkfs.fat -F32 /dev/sda1
         mkswap /dev/sda2
         swapon /dev/sda2
@@ -113,7 +111,7 @@ mounting_scripted=true
 
 # Mounting script.
 mount_the_partitions() {
-    if [ "$UEFI" = true ] ; then
+    if [[ -n "$UEFI" ]] ; then
         mount /dev/sda3 /mnt
         mkdir -p /mnt/boot
         mount /dev/sda1 /mnt/boot
