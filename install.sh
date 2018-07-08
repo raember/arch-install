@@ -10,8 +10,9 @@ if !(wget "https://github.com/raember/bash-me/blob/master/bashme"); then
   echo "Couldn't download file $file"
   exit 1;
 fi
+mv bashme bashme.sh
 mkdir bashme
-mv bashme bashme/bashme
+mv bashme.sh bashme/bashme
 chmod +x "$file"
 for file in "${files[@]}"; do
   if !(wget "https://raw.githubusercontent.com/raember/arch-install/master/$file"); then
