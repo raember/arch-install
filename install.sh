@@ -7,7 +7,7 @@ files=("$start" "$format" "$settings")
 
 echo "Downloading files..."
 if !(wget "https://raw.githubusercontent.com/raember/bash-me/master/bashme"); then
-  echo "Couldn't download file $file"
+  echo "Couldn't download file bashme/bashme"
   exit 1;
 fi
 mv bashme bashme.sh
