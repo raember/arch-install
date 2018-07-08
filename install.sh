@@ -6,11 +6,12 @@ format="format.sh"
 files=("$start" "$format" "$settings")
 
 echo "Downloading files..."
-mkdir bashme
-if !(wget "https://github.com/raember/bash-me/blob/master/bashme" bashme/bashme); then
+if !(wget "https://github.com/raember/bash-me/blob/master/bashme"); then
   echo "Couldn't download file $file"
   exit 1;
 fi
+mkdir bashme
+mv bashme bashme/bashme
 chmod +x "$file"
 for file in "${files[@]}"; do
   if !(wget "https://raw.githubusercontent.com/raember/arch-install/master/$file"); then
