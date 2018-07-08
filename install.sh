@@ -6,7 +6,7 @@ format="format.sh"
 files=("$start" "$format" "$settings")
 
 echo "Downloading files..."
-if !(wget "https://github.com/raember/bash-me/blob/master/bashme"); then
+if !(wget "https://raw.githubusercontent.com/raember/bash-me/master/bashme"); then
   echo "Couldn't download file $file"
   exit 1;
 fi
