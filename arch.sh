@@ -62,14 +62,13 @@ script_files=(
   "settings.sh"
 )
 
-declare -i x=4
+declare -ri left=4
 
 main() {
   declare_stack suggestion
   local -i number=1
   while : ; do
     tput clear
-    declare -i left
     declare -i top
     print_title "Arch Linux Installation"
     enumerate_options "Quit" \
@@ -110,14 +109,13 @@ main() {
           post_installation
           ;;
         *)
-          ((top--))
-          tput cup $((top+1)) $left
+          newline
           error "Please choose an option from above."
-          tput cup $top $left
+          tput cuu1
+          tput hpa $left
           continue
           ;;
       esac
-      pause
       break
     done
     pop suggestion number
@@ -126,27 +124,27 @@ main() {
 function pause() {
     [[ -n "$post_prompt" ]] && read
 }
+function newline() {
+    tput cud1
+    tput hpa $left
+}
 function print_title() {
-  left=4
-  top=2
   local title="$1"
-  tput cup $top $left
-  echo "${FG_WHITE}${UNDERLINE}$1${RESET}"
-  trace "Printed title: '$1' at ($top, $left)"
-  top=$((top + 2))
-  tput cup $top $left
+  tput cup 2 $left
+  echo "${FG_WHITE}${UNDERLINE}${BOLD}$1${RESET}"
+  trace "Printed title: '$1'"
+  newline
 }
 function enumerate_options() {
   local -i i=0
   local option
   for option in "$@"; do
-    tput cup $top $left
+    tput hpa $left
     echo "$i) $option"
-    trace "Printed option number $i: '$option' at ($top, $left)"
+    trace "Printed option number $i: '$option'"
     ((i++))
-    ((top++))
   done
-  ((top++))
+  newline
 }
 function list_options() {
   local -i maxwidth=$(($(tput cols)-left-2))
@@ -162,18 +160,16 @@ function list_options() {
       printf '%s' ', '
     fi
     if ((width >= maxwidth)); then
-      ((top++))
-      tput cup $top $left
+      newline
       width=${#option}
     fi
     printf '%s' "$option"
   done
-  ((top++))
-  ((top++))
+  newline
+  newline
 }
 function read_answer() {
   debug "Reading answer."
-  tput cup $top $left
   local _answer
   tput dch $(($(tput cols)-left))
   printf "$1"
@@ -183,7 +179,7 @@ function read_answer() {
   fi
   eval "$2='$_answer'"
   debug "Read answer: $2='$(eval "echo "\$$2"")'"
-  ((top++))
+  newline
 }
 
 
@@ -238,10 +234,10 @@ function pre_installation() {
           mount_file_systems
           ;;
         *)
-          ((top--))
-          tput cup $((top+1)) $left
+          newline
           error "Please choose an option from above."
-          tput cup $top $left
+          tput cuu1
+          tput hpa $left
           continue
           ;;
       esac
@@ -262,11 +258,13 @@ set_keyboard_layout() {
       list_options
       read_answer "Enter option (us): " keyboard_layout us
     fi
+    tput hpa $left
     info "Setting keyboard layout to '$keyboard_layout'."
     loadkeys $keyboard_layout
     check_retval $? && break
+    tput hpa $left
     warn "Couldn't set the keyboard layout."
-    keyboard_layout=""
+    keyboard_layout=
   done
   pause
   while : ; do
@@ -296,7 +294,7 @@ set_keyboard_layout() {
     setfont $console_font
     check_retval $? && break
     warn "Couldn't set the console font."
-    console_font=""
+    console_font=
   done
 }
 
@@ -323,13 +321,13 @@ make_sure_internet_is_connected() {
   [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
   while : ; do
     debug "Pinging $ping_address."
-    ping -c 1 $ping_address | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
+    ping -c 1 $ping_address 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
     if check_retval $?; then
-      tput hpa $x
+      tput hpa $left
       info "Internet is up and running"
       break;
     else
-      tput hpa $x
+      tput hpa $left
       info "No active internet connection found"
       info "Please stop the running dhcpcd service with ${ITALIC}systemctl stop dhcpcd@${RESET} and pressing ${format_code}Tab${format_no_code}.
 Proceed with ${BOLD}Network configuration${RESET}:
@@ -343,74 +341,77 @@ Then resume this script with ${ITALIC}-r $INDEX${RESET}."
   done
 }
 
-# 3
+# 4 
 update_the_system_clock() {
   tput clear
   print_title "Update the system clock"
-  tput hpa $x
+  tput hpa $left
   info "Enabling NTP synchronization."
   timedatectl set-ntp true | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
   if check_retval $?; then
-    if [[ $region != "" && $city != "" ]] ; then
-      tput hpa $x
-      info "Setting timezone based on locale settings"
-      timedatectl set-timezone $region/$city | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-      if check_retval $?; then
-        tput hpa $x
-        info "Set the timezone successfully"
-      else
-        tput hpa $x
-        info "Couldn't set the timezone"
-      fi
-    fi
-    tput hpa $x
-    trace "Waiting for the changes to take effect..."
-    sleep 1s
-    tput hpa $x
-    info "Please check if the time has been set correctly:"
-    timedatectl status | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-    if check_retval $?; then
-      tput hpa $x
-      info "If the displayed time is incorrect, please set it up yourself."
-    else
-      tput hpa $x
-      fatal "Something went horribly wrong"
-      exit $EX_ERR
-    fi
+    return
+    # if [[ $region != "" && $city != "" ]] ; then
+    #   tput hpa $left
+    #   info "Setting timezone based on locale settings"
+    #   timedatectl set-timezone $region/$city | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
+    #   if check_retval $?; then
+    #     tput hpa $left
+    #     info "Set the timezone successfully"
+    #   else
+    #     tput hpa $left
+    #     info "Couldn't set the timezone"
+    #   fi
+    # fi
+    # tput hpa $left
+    # trace "Waiting for the changes to take effect..."
+    # sleep 1s
+    # tput hpa $left
+    # info "Please check if the time has been set correctly:"
+    # timedatectl status | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
+    # if check_retval $?; then
+    #   tput hpa $left
+    #   info "If the displayed time is incorrect, please set it up yourself."
+    # else
+    #   tput hpa $left
+    #   fatal "Something went horribly wrong"
+    #   exit $EX_ERR
+    # fi
   else
-    tput hpa $x
+    tput hpa $left
     fatal "Couldn't enable NTP synchronization."
     exit $EX_ERR
   fi
 }
 
-# 4
-partition_disks() {
-    info "[$INDEX]: Partition the disks"
-    if [[ -n "$partitioning_scripted" ]] ; then
-        [ -f /sys/firmware/efi/efivars ] && UEFI=1
-        partition_the_disks
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
-    else
-        print_status "Listing all block devices..."
-        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "The following partitions are ${font_bold}required${font_no_bold} for a chosen device:"
-        print_status " - One partition for the root directory ${format_code}/${format_no_code}"
-        print_check_file "/sys/firmware/efi/efivars" success
-        if [ "$success" = true ]; then
-            print_status " - an ${font_bold}EFI System Partition${font_no_bold}(fat32):"
-            print_status "   ${font_link}https://wiki.archlinux.org/index.php/EFI_System_Partition${font_no_link}"
-        fi
-        print_status ""
-        print_status "To modify partition tables, use ${format_code}fdisk /dev/sdX${format_no_code} or ${format_code}parted /dev/sdX${format_no_code}."
-        print_status "If desired, setting up LVM, LUKS or RAID, do so now as well"
-        sub_shell
+# 5
+partition_the_disks() {
+  tput clear
+  print_title "Partition the disks"
+  lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
+  newline
+  #local -a disks=($(lsblk -np | grep -oE "^[a-z/0-9]+"))
+  local cmd="parted -s $disk mklabel $partition_layout"
+  tput hpa $left
+  echo "${BOLD}$cmd${RESET}"
+  for part in "${partitioning[@]}"; do
+    tput hpa $((left+4))
+    echo "${BOLD}$part${RESET}"
+  done
+  cmd="$cmd ${partitioning[@]}"
+  debug "Partitioning command '$cmd'."
+  newline
+  read_answer "Should partitioning command be run now? (n): " partition_now n
+  if [[ "$partition_now" == "y" ]]; then
+    info 'Running command now...'
+    find $cmd 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
+    if ! check_retval $?; then
+      tput hpa $left
+      error "Couldn't run partitioning command."
     fi
-    print_end
+  fi
 }
 
-# 5
+# 6
 format_partitions() {
     print_section "Format the partitions"
     if [ "$formatting_scripted" = true ] ; then

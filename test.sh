@@ -9,25 +9,29 @@
 
 loadkeys() { return; }
 timedatectl() {
-    [[ "$1" == "status" ]] || return;
-    echo "                      Local time: Thu 2018-04-12 18:22:58 CEST"
-    echo "                  Universal time: Thu 2018-04-12 16:22:58 UTC"
-    echo "                        RTC time: Thu 2018-04-12 16:22:58"
-    echo "                       Time zone: Europe/Zurich (CEST, +0200)"
-    echo "       System clock synchronized: yes"
-    echo "systemd-timesyncd.service active: yes"
-    echo "                 RTC in local TZ: no"
-    return;
+  [[ "$1" == "status" ]] || return;
+  cat <<eof
+                      Local time: Thu 2018-04-12 18:22:58 CEST
+                  Universal time: Thu 2018-04-12 16:22:58 UTC
+                        RTC time: Thu 2018-04-12 16:22:58
+                       Time zone: Europe/Zurich (CEST, +0200)
+       System clock synchronized: yes
+systemd-timesyncd.service active: yes
+                 RTC in local TZ: no
+eof
 }
 lsblk() {
-    echo "NAME   TYPE FSTYPE  LABEL             SIZE MOUNTPOINT HOTPLUG"
-    echo "sda    disk                           128G                  0"
-    echo "|-sda1 part swap                        4G [SWAP]           0"
-    echo "\`-sda2 part ext4                      124G /                0"
-    echo "sdc    disk                          14.4G                  1"
-    echo "\`-sdc1 part ntfs    16GB-Patriot-Tab 14.4G                  1"
-    echo "sr0    rom  iso9660 ARCH_201804       556M                  1"
+  cat <<eof
+NAME   TYPE FSTYPE  LABEL             SIZE MOUNTPOINT HOTPLUG
+/dev/sda disk                             128G                  0
+|-sda1   part swap                          4G [SWAP]           0
+\`-sda2   part ext4                        124G /                0
+/dev/sdc disk                            14.4G                  1
+\`-sdc1   part ntfs    16GB-Patriot-Tab   14.4G                  1
+/dev/sr0 rom  iso9660 ARCH_201804         556M                  1
+eof
 }
+parted() { return; }
 ls() {
   case "$1" in
     "/usr/share/kbd/keymaps/**/*.map.gz")
@@ -489,6 +493,7 @@ showconsolefont() {
 QRSTUVWXYZ[\]^_`
 eof
 }
+reboot() { return; }
 locale-gen() { return; }
 pacstrap() {
     echo "Installing..."
