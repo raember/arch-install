@@ -3,7 +3,7 @@
 start="arch.sh"
 settings="settings.sh"
 format="format.sh"
-files=("$start" "$format" "$settings" "LICENCE")
+files=("$start" "$format" "$settings" "LICENSE")
 
 echo "Downloading files..."
 if !(wget "https://raw.githubusercontent.com/raember/bash-me/master/bashme"); then
