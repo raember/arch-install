@@ -1,142 +1,127 @@
 #!/bin/bash
 #
-####################################################################################################
-#   SETTINGS
-#
-# Comment out settings which are to be determined when
-# the script runs(more interactive)
-
-####################################################################################################
+################################################################################
 #   Script Settings
-#
-# Platform desktop/laptop
-# Determines whether packages for wlan will be asked to be installed or not
-platform="laptop"
-# Wait after every part(default: '')
-post_prompt=1
+run_through= # Don't let user navigate(default: '')
+post_prompt=1 # Wait after every part(default: '')
 
-####################################################################################################
+################################################################################
 #   Pre-Installation
 #
 #### Set the keyboard layout
 keyboard_layout="de_CH-latin1"
 console_font="Lat2-Terminus16.psfu.gz"
-# Sans-serif-fonts with only moderate eyecancer:
-# cybercafe.fnt.gz
-# gr928-8x16-thin.psfu.gz
-# greek-polytonic.psfu.gz
-# Lat2-Terminus16.psfu.gz
-# LatGrkCyr-8x16.psfu.gz
+  # Sans-serif-fonts with only moderate eyecancer:
+  # cybercafe.fnt.gz
+  # gr928-8x16-thin.psfu.gz
+  # greek-polytonic.psfu.gz
+  # Lat2-Terminus16.psfu.gz
+  # LatGrkCyr-8x16.psfu.gz
 
 #### Verify the boot mode
 
 #### Connect to the Internet
-# default: "8.8.8.8"
-ping_address="archlinux.org"
+ping_address="archlinux.org" # default: "8.8.8.8"
 
 #### Update the system clock
 
 #### Partition the disks
-# Partition layout (gpt or mbr)
-partition_layout="gpt"
-disk="/dev/sda"
-declare -a partitioning=(
-  "mkpart primary fat32 1049B 578MB"
-  "mkpart primary linux-swap 578MB 11.3GB"
-  "mkpart primary ext4 11.3GB 500GB"
-)
-
-# Partitioning script. No write to stdout means manual configuration
-partition_the_disks() {
-  (
-    if [[ -n "$UEFI" ]] ; then # EFI partition needed
-      echo "n"                 # Add a new partition
-      echo ""                  # Partition number (default: 1)
-      echo ""                  # First sector (default: 2048)
-      echo "+550M"             # Last sector (default: (max))
-                               # Current type is 'Linux filesystem'
-      echo "EF00"              # Hex code of GUID (default: 8300)
-                               # Changed type of partition to 'EFI system''
-    else          # BIOS boot partition needed
-      echo "n"    # Add a new partition
-      echo ""     # Partition number (default: 1)
-      echo ""     # First sector (default: 2048)
-      echo "+1M"  # Last sector (default: (max))
-                  # Current type is 'Linux filesystem'
-      echo "EF02" # Hex code of GUID (default: 8300)
-                  # Changed type of partition to 'BIOS boot partition'
-    fi
-
-    # Swap partition
-    echo "n"    # Add a new partition
-    echo ""     # Partition number (default: 1)
-    echo ""     # First sector (default: x)
-    echo "+10G" # Last sector (default: (max))
-                # Current type is 'Linux filesystem'
-    echo "8200" # Hex code of GUID (default: 8300)
-                # Changed type of partition to 'Linux swap'
-                
-    # Root partition
-    echo "n"    # Add a new partition
-    echo ""     # Partition number (default: 1)
-    echo ""     # First sector (default: x)
-    echo ""     # Last sector (default: (max))
-                # Current type is 'Linux filesystem'
-    echo ""     # Hex code of GUID (default: 8300)
-                # Changed type of partition to 'Linux swap'
-
-    echo "w"    # Write table to disk and exit
-    echo "y"
-  ) | gdisk /dev/sda
+disk="/dev/sda" # For convenience - irrelevant for script
+function partition_disks() {
+  parted -s $disk \
+    mklabel gpt \
+    mkpart primary fat32 1049B 578MB \
+    mkpart primary linux-swap 578MB 11.3GB \
+    mkpart primary ext4 11.3GB 500GB
 }
 
 #### Format the partitions
-# Use seperate script to format the disks automatically
-# default: (asks user to format the disks manually)
-formatting_scripted=true
-
-# Formatting script. $UEFI is provided by the arch.sh
-format_the_partitions() {
-  if [[ -n "$UEFI" ]] ; then
-    mkfs.fat -F32 /dev/sda1
-    mkswap /dev/sda2
-    swapon /dev/sda2
-    mkfs.ext4 /dev/sda3
-  else
-    mkswap /dev/sda2
-    swapon /dev/sda2
-    mkfs.ext4 /dev/sda3
-  fi
+# Formatting script
+function format_partitions() {
+  mkfs.fat -F32 ${disk}1
+  mkswap ${disk}2
+  swapon ${disk}2
+  mkfs.ext4 ${disk}3
 }
 
 #### Mount the file systems
-# Use seperate script to mount the disks automatically
-# default: (asks user to mount the disks manually)
-mounting_scripted=true
-
 # Mounting script.
-mount_the_partitions() {
-  if [[ -n "$UEFI" ]] ; then
-    mount /dev/sda3 /mnt
-    mkdir -p /mnt/boot
-    mount /dev/sda1 /mnt/boot
-  else
-    mount /dev/sda2 /mnt
-  fi
+function mount_partitions() {
+  mount ${disk}3 /mnt
+  mkdir -p /mnt/boot
+  mount ${disk}1 /mnt/boot
 }
 
-
-####################################################################################################
+################################################################################
 #   Pre-Installation
 #
 #### Select the mirrors
-# default: (asks)
-rank_by_speed=true
-# 0 = all
-mirror_count=50
-
-# default: (asks)
-edit_mirrorlist=true
+# Method to arrange mirrorlist(default: 'speed_offline')
+# speed_offline|speed_online|download|edit
+mir_sel_method="download"
+countries=(AT BE BA BG CN HR CZ DK FI FR DE GR HU IS IE IT JP KZ LT LU MK NL NC NO PL RO RS SK SI KR ES SE CH UA GB)
+  # COUNTRY              CODE SERVERS
+  # Australia              AU 12
+  # Austria                AT  4
+  # Bangladesh             BD  1
+  # Belarus                BY  4
+  # Belgium                BE  2
+  # Bosnia and Herzegovina BA  2
+  # Brazil                 BR  2
+  # Bulgaria               BG  8
+  # Canada                 CA 11
+  # Chile                  CL  1
+  # China                  CN 10
+  # Colombia               CO  2
+  # Croatia                HR  1
+  # Czechia                CZ 15
+  # Denmark                DK  5
+  # Ecuador                EC  5
+  # Finland                FI  3
+  # France                 FR 41
+  # Germany                DE 86
+  # Greece                 GR  7
+  # Hong Kong              HK  5
+  # Hungary                HU  2
+  # Iceland                IS  3
+  # India                  IN  3
+  # Indonesia              ID  2
+  # Ireland                IE  2
+  # Israel                 IL  2
+  # Italy                  IT  5
+  # Japan                  JP  9
+  # Kazakhstan             KZ  2
+  # Lithuania              LT  3
+  # Luxembourg             LU  1
+  # Macedonia              MK  4
+  # Mexico                 MX  2
+  # Netherlands            NL 17
+  # New Caledonia          NC  1
+  # New Zealand            NZ  2
+  # Norway                 NO  6
+  # Philippines            PH  1
+  # Poland                 PL  6
+  # Portugal               PT  4
+  # Qatar                  QA  2
+  # Romania                RO  9
+  # Russia                 RU  7
+  # Serbia                 RS  2
+  # Singapore              SG  5
+  # Slovakia               SK  4
+  # Slovenia               SI  3
+  # South Africa           ZA  3
+  # South Korea            KR  5
+  # Spain                  ES  2
+  # Sweden                 SE 14
+  # Switzerland            CH  7
+  # Taiwan                 TW  7
+  # Thailand               TH  5
+  # Turkey                 TR  3
+  # Ukraine                UA  6
+  # United Kingdom         GB  9
+  # United States          US 83
+  # Vietnam                VN  1
+num_of_mirrors=50 # How many mirrors are to be stored(default: 10)
 
 #### Install the base packages
 # Additional packages to install
@@ -144,7 +129,7 @@ edit_mirrorlist=true
 additional_packages="base-devel git vim"
 
 
-####################################################################################################
+################################################################################
 #   Configure the system
 #
 #### Fstab ("U" = UUID, "L" = Label)
@@ -201,7 +186,7 @@ dialog=true
 modify_initramfs=false
 
 
-####################################################################################################
+################################################################################
 #   Package-Installation & Constomization
 #
 #### Preparation
@@ -328,6 +313,7 @@ packages=(
   #gpm xf86-input-synaptics # Console mouse support
   lxappearance # Theme-manager(GTK, GTK+, Murrine, QT4,...)
   i3lock # Lock screen
+  reflector # Mirror list
 
   # Applications
   gksu # Graphical sudo request

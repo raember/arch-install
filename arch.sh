@@ -62,23 +62,26 @@ script_files=(
   "settings.sh"
 )
 
-declare -ri left=4
-
-main() {
+declare -i left=4
+[[ -n "$run_through" ]] && left=0
+#################################################
+# MAIN
+function main() {
   declare_stack suggestion
   local -i number=1
   while : ; do
-    tput clear
+    prepare_pane
     declare -i top
     print_title "Arch Linux Installation"
-    enumerate_options "Quit" \
+    [[ -z "$run_through" ]] && enumerate_options "Quit" \
                 "Pre-Installation" \
                 "Installation" \
                 "Configure the system" \
                 "Reboot" \
                 "Post-Installation"
     while : ; do
-      read_answer "Enter option [$number]: " answer $number
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
       case "$answer" in
         0)
           return
@@ -89,7 +92,6 @@ main() {
           ;;
         2)
           push suggestion 3
-          NYI
           installation
           ;;
         3)
@@ -111,8 +113,8 @@ main() {
         *)
           newline
           error "Please choose an option from above."
-          tput cuu1
-          tput hpa $left
+          tput rc
+          tput dl 2
           continue
           ;;
       esac
@@ -121,74 +123,15 @@ main() {
     pop suggestion number
   done
 }
-function pause() {
-    [[ -n "$post_prompt" ]] && read
-}
-function newline() {
-    tput cud1
-    tput hpa $left
-}
-function print_title() {
-  local title="$1"
-  tput cup 2 $left
-  echo "${FG_WHITE}${UNDERLINE}${BOLD}$1${RESET}"
-  trace "Printed title: '$1'"
-  newline
-}
-function enumerate_options() {
-  local -i i=0
-  local option
-  for option in "$@"; do
-    tput hpa $left
-    echo "$i) $option"
-    trace "Printed option number $i: '$option'"
-    ((i++))
-  done
-  newline
-}
-function list_options() {
-  local -i maxwidth=$(($(tput cols)-left-2))
-  local -i width=0
-  local first=1
-  local option
-  trace "Printing ${#options[@]} options."
-  for option in "${options[@]}"; do
-    width=$((width+${#option}+2))
-    if [[ -n "$first" ]]; then
-      first=""
-    else
-      printf '%s' ', '
-    fi
-    if ((width >= maxwidth)); then
-      newline
-      width=${#option}
-    fi
-    printf '%s' "$option"
-  done
-  newline
-  newline
-}
-function read_answer() {
-  debug "Reading answer."
-  local _answer
-  tput dch $(($(tput cols)-left))
-  printf "$1"
-  read _answer
-  if [[ -n "$3" ]] && [[ -z "$_answer" ]]; then
-    _answer="$3"
-  fi
-  eval "$2='$_answer'"
-  debug "Read answer: $2='$(eval "echo "\$$2"")'"
-  newline
-}
 
-
+#################################################
+# 1
 function pre_installation() {
   local -i number=1
   while : ; do
-    tput clear
+    prepare_pane
     print_title "Pre-Installation"
-    enumerate_options "Return to Main" \
+    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
                 "Set the keyboard layout" \
                 "Verify the boot mode" \
                 "Connect to the Internet" \
@@ -197,7 +140,8 @@ function pre_installation() {
                 "Format the partitions" \
                 "Mount the file systems"
     while : ; do
-      read_answer "Enter option [$number]: " answer $number
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
       case "$answer" in
         0)
           return
@@ -220,24 +164,21 @@ function pre_installation() {
           ;;
         5)
           push suggestion 6
-          NYI
           partition_the_disks
           ;;
         6)
           push suggestion 7
-          NYI
           format_the_partitions
           ;;
         7)
           push suggestion 0
-          NYI
-          mount_file_systems
+          mount_the_file_systems
           ;;
         *)
           newline
           error "Please choose an option from above."
-          tput cuu1
-          tput hpa $left
+          tput rc
+          tput dl 2
           continue
           ;;
       esac
@@ -248,39 +189,40 @@ function pre_installation() {
   done
 }
 
-# 1
-set_keyboard_layout() {
+# 1.1
+function set_keyboard_layout() {
   while : ; do
-    tput clear
+    prepare_pane
     print_title "Set the keyboard layout"
     if [[ -z "$keyboard_layout" ]]; then
       local -a options=($(ls /usr/share/kbd/keymaps/**/*.map.gz | grep -oE '[^/]*$' | sed 's/\.map\.gz//g'))
       list_options
-      read_answer "Enter option (us): " keyboard_layout us
+      keyboard_layout=us
+      [[ -z "$run_through" ]] && read_answer "Enter option (us): " keyboard_layout us
     fi
-    tput hpa $left
+    newline
     info "Setting keyboard layout to '$keyboard_layout'."
-    loadkeys $keyboard_layout
-    check_retval $? && break
-    tput hpa $left
+    exec_cmd loadkeys $keyboard_layout && break
     warn "Couldn't set the keyboard layout."
     keyboard_layout=
   done
   pause
   while : ; do
-    tput clear
+    prepare_pane
     print_title "Set the keyboard layout(Console font)"
     if [[ -z "$console_font" ]]; then
       local -a options=($(ls /usr/share/kbd/consolefonts))
       list_options
-      echo "Write 'cycle' to test each font."
-      read_answer "Enter option (default8x16): " console_font default8x16
+      info "Write 'cycle' to test each font."
+      console_font='default8x16'
+      [[ -z "$run_through" ]] && read_answer "Enter option (default8x16): " console_font default8x16
       if [[ "$console_font" == "cycle" ]]; then
         for consfnt in "${options[@]}"; do
           tput clear
           setfont $consfnt
           print_title "Font: $consfnt"
-          showconsolefont
+          newline
+          exec_cmd showconsolefont
           top=$((top+19))
           tput cup $top $left
           echo "Lorem ipsum dolor sit amet."
@@ -290,18 +232,19 @@ set_keyboard_layout() {
         continue
       fi
     fi
+    newline
     info "Setting console font to '$console_font'."
-    setfont $console_font
-    check_retval $? && break
+    exec_cmd setfont $console_font && break
     warn "Couldn't set the console font."
     console_font=
   done
 }
 
-# 2
-verify_boot_mode() {
-  tput clear
+# 1.2
+function verify_boot_mode() {
+  prepare_pane
   print_title "Verifying the boot mode"
+  newline
   debug "Checking if efivars exist."
   if [ -f /sys/firmware/efi/efivars ] ; then
     info "UEFI is enabled."
@@ -310,24 +253,24 @@ verify_boot_mode() {
   fi
 }
 
-# 3
-connect_to_the_internet() {
-  tput clear
+# 1.3
+function connect_to_the_internet() {
+  prepare_pane
   print_title "Connect to the Internet"
+  newline
   make_sure_internet_is_connected
 }
-make_sure_internet_is_connected() {
+function make_sure_internet_is_connected() {
   info "Checking internet connectivity."
   [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
   while : ; do
     debug "Pinging $ping_address."
-    ping -c 1 $ping_address 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-    if check_retval $?; then
-      tput hpa $left
+    if exec_cmd ping -c 1 $ping_address; then
+      newline
       info "Internet is up and running"
       break;
     else
-      tput hpa $left
+      newline
       info "No active internet connection found"
       info "Please stop the running dhcpcd service with ${ITALIC}systemctl stop dhcpcd@${RESET} and pressing ${format_code}Tab${format_no_code}.
 Proceed with ${BOLD}Network configuration${RESET}:
@@ -341,15 +284,15 @@ Then resume this script with ${ITALIC}-r $INDEX${RESET}."
   done
 }
 
-# 4 
-update_the_system_clock() {
-  tput clear
+# 1.4 
+function update_the_system_clock() {
+  prepare_pane
   print_title "Update the system clock"
-  tput hpa $left
+  newline
   info "Enabling NTP synchronization."
-  timedatectl set-ntp true | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-  if check_retval $?; then
-    return
+  if ! exec_cmd timedatectl set-ntp true; then
+    newline
+    error "Couldn't enable NTP synchronization."
     # if [[ $region != "" && $city != "" ]] ; then
     #   tput hpa $left
     #   info "Setting timezone based on locale settings"
@@ -376,115 +319,225 @@ update_the_system_clock() {
     #   fatal "Something went horribly wrong"
     #   exit $EX_ERR
     # fi
-  else
-    tput hpa $left
-    fatal "Couldn't enable NTP synchronization."
-    exit $EX_ERR
   fi
 }
 
-# 5
-partition_the_disks() {
-  tput clear
+# 1.5
+function partition_the_disks() {
+  prepare_pane
   print_title "Partition the disks"
-  lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
   newline
-  #local -a disks=($(lsblk -np | grep -oE "^[a-z/0-9]+"))
-  local cmd="parted -s $disk mklabel $partition_layout"
-  tput hpa $left
-  echo "${BOLD}$cmd${RESET}"
-  for part in "${partitioning[@]}"; do
-    tput hpa $((left+4))
-    echo "${BOLD}$part${RESET}"
-  done
-  cmd="$cmd ${partitioning[@]}"
-  debug "Partitioning command '$cmd'."
+  exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
   newline
-  read_answer "Should partitioning command be run now? (n): " partition_now n
+  local partition_now='y'
+  [[ -z "$run_through" ]] && read_answer "Should partitioning command be run now? [y/N]: " partition_now n
+  newline
   if [[ "$partition_now" == "y" ]]; then
-    info 'Running command now...'
-    find $cmd 2>&1 | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-    if ! check_retval $?; then
-      tput hpa $left
+    info "Executing command:"
+    if ! exec_cmd partition_disks; then
+      newline
       error "Couldn't run partitioning command."
+    else
+      newline
+      info 'Finished partitioning.'
+      newline
+      info 'Updated block devices:'
+      exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
     fi
+  else
+    info 'Not running command.'
   fi
 }
 
-# 6
-format_partitions() {
-    print_section "Format the partitions"
-    if [ "$formatting_scripted" = true ] ; then
-        print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd "format_the_partitions" success
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
+# 1.6
+function format_the_partitions() {
+  prepare_pane
+  print_title "Format the partitions"
+  newline
+  exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
+  local format_now='y'
+  [[ -z "$run_through" ]] && read_answer "Should the formatting command be run now? [y/N]: " format_now n
+  newline
+  if [[ "$format_now" == "y" ]]; then
+    info "Executing ${BOLD}format_partitions${RESET}:"
+    if ! exec_cmd format_partitions; then
+      newline
+      error 'Something went wrong.'
     else
-        print_status "Listing all block devices..."
-        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "Format the partitions with the desired file systems. Example:"
-        print_status "${format_code}mkfs.ext4 /dev/sdXN${format_no_code}"
-        print_status "If you prepared a swap partition, enable it:"
-        print_status "${format_code}mkswap /dev/sdXN${format_no_code}"
-        print_status "${format_code}swapon /dev/sdXN${format_no_code}"
-        sub_shell
+      newline
+      info 'Finished formatting.'
     fi
-    print_end
+  else
+    info 'Not running command.'
+  fi
 }
 
-# 6
-mount_file_systems() {
-    print_section "Mount the file systems"
-    if [ "$mounting_scripted" = true ] ; then
-        print_check_file "/sys/firmware/efi/efivars" UEFI
-        print_cmd_invisible "mount_the_partitions" success
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
+# 1.7
+function mount_the_file_systems() {
+  prepare_pane
+  print_title "Mount the file systems"
+  local mount_now='y'
+  [[ -z "$run_through" ]] && read_answer "Should the mounting command be run now? [y/N]: " mount_now n
+  newline
+  if [[ "$mount_now" == "y" ]]; then
+    info "Executing ${BOLD}mount_partitions${RESET}:"
+    if ! exec_cmd mount_partitions; then
+      newline
+      error 'Something went wrong.'
     else
-        print_status "Listing all block devices..."
-        print_cmd "lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG" success
-        [ "$success" = false ] && print_fail "Something went horribly wrong"
-        print_status "Mount the root partition of the new system to ${format_code}/mnt${format_no_code}:"
-        print_status "${format_code}mount /dev/sdXN /mnt${format_no_code}"
-        print_status "Create mount points for any remaining partitions and mount them accordingly: "
-        print_status "${format_code}mkdir /mnt/boot${format_no_code}"
-        print_status "${format_code}mount /dev/sdXN /mnt/boot${format_no_code}"
-        sub_shell
+      newline
+      info 'Updated block devices:'
+      exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
     fi
-    print_end
+  else
+    info 'Not running command.'
+  fi
 }
 
-# 7
-select_mirrors() {
-    print_section "Select the mirrors"
-    mirrorlist="/etc/pacman.d/mirrorlist"
-    if  [ "$rank_by_speed" = true ] ; then
-        print_cmd_invisible "cp $mirrorlist $mirrorlist.backup" success
-        [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "sed -i 's/^#Server/Server/' $mirrorlist.backup" success
-        [ "$success" != true ] && print_fail "Failed"
-        print_status "Please edit the mirrorlist and sort it yourself using the following command:"
-        print_status "    $ ${format_code}cd /etc/pacman.d${format_no_code}"
-        print_status "    $ ${format_code}vim mirrorlist.backup${format_no_code}"
-        print_status "    $ ${format_code}rankmirrors -v mirrorlist.backup > mirrorlist${format_no_code}"
-        print_status "You can add the ${format_code}-n N${format_no_code} flag to specify the number of mirrors to output"
-        sub_shell
-    fi
-    if [ "$edit_mirrorlist" = "" ] ; then
-        print_prompt_boolean "Do you want to edit the mirrorlist?" "y" edit_mirrorlist
-    fi
-    if [ "$edit_mirrorlist" = true ] ; then
-        print_cmd "vim $mirrorlist" success
-        if [ "$success" = true ] ; then
-            print_pos  "Finished editing mirrorlist"
-        else
-            print_fail "Failed editing mirrorlist"
-        fi
-    fi
-    print_end
+#################################################
+# 2
+function installation() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    print_title "Installation"
+    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
+                "Select the mirrors" \
+                "Install the base packages"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          select_the_mirrors
+          ;;
+        2)
+          push suggestion 0
+          install_the_base_packages
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+declare -ra method_dict=(
+  [speed_offline]=1
+  [speed_online]=2
+  [download]=3
+  [edit]=4
+)
+declare -ra country_dict=([AU]='Australia' [AT]='Austria' [BD]='Bangladesh'
+  [BY]='Belarus' [BE]='Belgium' [BA]='Bosnia and Herzegovina' [BR]='Brazil'
+  [BG]='Bulgaria' [CA]='Canada' [CL]='Chile' [CN]='China' [CO]='Colombia'
+  [HR]='Croatia' [CZ]='Czechia' [DK]='Denmark' [EC]='Ecuador' [FI]='Finland'
+  [FR]='France' [DE]='Germany' [GR]='Greece' [HK]='Hong Kong' [HU]='Hungary'
+  [IS]='Iceland' [IN]='India' [ID]='Indonesia' [IE]='Ireland' [IL]='Israel'
+  [IT]='Italy' [JP]='Japan' [KZ]='Kazakhstan' [LT]='Lithuania'
+  [LU]='Luxembourg' [MK]='Macedonia' [MX]='Mexico' [NL]='Netherlands'
+  [NC]='New Caledonia' [NZ]='New Zealand' [NO]='Norway' [PH]='Philippines'
+  [PL]='Poland' [PT]='Portugal' [QA]='Qatar' [RO]='Romania' [RU]='Russia'
+  [RS]='Serbia' [SG]='Singapore' [SK]='Slovakia' [SI]='Slovenia'
+  [ZA]='South Africa' [KR]='South Korea' [ES]='Spain' [SE]='Sweden'
+  [CH]='Switzerland' [TW]='Taiwan' [TH]='Thailand' [TR]='Turkey'
+  [UA]='Ukraine' [GB]='United Kingdom' [US]='United States' [VN]='Vietnam'
+)
+# 2.1
+select_the_mirrors() {
+  prepare_pane
+  print_title "Select the mirrors"
+  [[ -z "$run_through" ]] && enumerate_options "Return to Installation" \
+              "Download mirrorlist from the official Pacman Mirrorlist Generator"\
+              "Rank mirrors by speed" \
+              "Manually edit mirrorlist"
+  while : ; do
+    answer="${method_dict[$mir_sel_method]}"
+    [[ -z "$mir_sel_method" ]] && answer=${method_dict[speed_offline]}
+    [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+    case "$answer" in
+      0)
+        return
+        ;;
+      1)
+        rank_mirror_speed_offline
+        ;;
+      2)
+        rank_mirror_speed_online
+        ;;
+      3)
+        download_mirrors_offline
+        ;;
+      4)
+        edit_mirrorlist
+        ;;
+      *)
+        newline
+        error "Please choose an option from above."
+        tput rc
+        tput dl 2
+        continue
+        ;;
+    esac
+    pause
+    break
+  done
+}
+function rank_mirror_speed_offline() {
+  prepare_pane
+  print_title "Rank mirrors by speed(offline)"
+  newline
+  local -r mirrorlist="/etc/pacman.d/mirrorlist"
+  local mirrorlist_bak="$mirrorlist.bak"
+  local -i i=2
+  # while [[ -f "$mirrorlist_bak" ]]; do
+  #   mirrorlist_bak="$mirrorlist.bak$i"
+  #   ((i++))
+  # done
+  info "Backing up mirrorlist to '$mirrorlist_bak'."
+  exec_cmd cp "$mirrorlist" "$mirrorlist_bak"
+  newline
+  if ((${#countries[@]}>0)); then
+    info 'Uncommenting mirrors of specified countries.'
+    local IFS="|"
+    debug "Uncommenting countries: '${countries[*]}'."
+    local cc
+    for cc in "${countries[@]}"; do
+      exec_cmd cat $mirrorlist_bak | \
+        sed -z 's/##/\n##/g' | \
+        awk "/^## ${country_dict[$cc]}$/{f=1}f==0{next}/^$/{exit}{print substr(\$0, 2)}" "$mirrorlist_bak" > \
+        $mirrorlist
+    done
+  else
+    info 'Uncommenting every mirror.'
+    exec_cmd sed -i 's/^#Server/Server/' "$mirrorlist_bak"
+  fi
+  newline
+  info 'Ranking mirrors(This may take a while).'
+  [[ -z "$num_of_mirrors" ]] && num_of_mirrors=10
+  if ! exec_cmd rankmirrors -n $num_of_mirrors $mirrorlist_bak > $mirrorlist; then
+    newline
+    error "Couldn't rank the mirrors."
+  else
+    newline
+    info 'Finished ranking the mirrors.'
+  fi
 }
 
 # 8
-install_base_packages() {
+install_the_base_packages() {
     print_section "Install the base packages"
     print_status "Installing the ${format_code}base${format_no_code} package group to the the new system."
     if [[ $additional_packages == "" ]] ; then
@@ -934,30 +987,78 @@ post_installation() {
     print_end
 }
 
-# Parse arguments
-help() {
-	echo -e "Usage:"
-	echo -e "\$ $(basename $0) [-r number|-c]\tStart setup"
-	echo -e " -r number\tResume script from specific point according to ArchWiki"
-	echo -e " -c\t\tResume script from inside chroot - equals '-r 11'"
-	echo -e " -h\t\tShow this help text"
-}
+#################################################
+# Helpers
 
-while getopts "r:c" arg; do
-	case $arg in
-		r) # Resume setup
-			resume=$OPTARG;;
-        c) # Resume from inside chroot
-            resume=11;;
-		h) # Help
-			help
-			exit 0;;
-		?) # Invalid option
-			help
-			exit 1;;
-	esac
-done
-INDEX=$resume
+function pause() {
+    [[ -n "$post_prompt" ]] && read
+}
+function newline() {
+    tput cud1
+    tput hpa $left
+}
+function print_title() {
+  local title="$1"
+  [[ -z "$run_through" ]] && tput cud 2
+  newline
+  printf '%s' "${FG_WHITE}${UNDERLINE}${BOLD}$1${RESET}"
+  trace "Printed title: '$1'"
+  newline
+}
+function enumerate_options() {
+  local -i i=0
+  local option
+  for option in "$@"; do
+    newline
+    printf '%s' "$i) $option"
+    trace "Printed option number $i: '$option'"
+    ((i++))
+  done
+}
+function list_options() {
+  local -i maxwidth=$(($(tput cols)-left-2))
+  local -i width=0
+  local first=1
+  local option
+  trace "Printing ${#options[@]} options."
+  for option in "${options[@]}"; do
+    width=$((width+${#option}+2))
+    if [[ -n "$first" ]]; then
+      first=""
+    else
+      printf '%s' ', '
+    fi
+    if ((width >= maxwidth)); then
+      newline
+      width=${#option}
+    fi
+    printf '%s' "$option"
+  done
+  newline
+  newline
+}
+function read_answer() {
+  debug "Reading answer."
+  tput sc
+  newline
+  printf "$1"
+  local _answer
+  read _answer
+  if [[ -n "$3" ]] && [[ -z "$_answer" ]]; then
+    _answer="$3"
+  fi
+  eval "$2='$_answer'"
+  debug "Read answer: $2='$(eval "echo "\$$2"")'"
+}
+function exec_cmd() {
+  $* 2>&1 | (tput hpa $left && cat) | sed -z "s/\n/\n$(tput hpa $left)/gm"
+  local retval=$(check_retval ${PIPESTATUS[0]})
+  return $retval
+}
+function prepare_pane() {
+  [[ -n "$run_through" ]] && left=$(((${#FUNCNAME[@]}-4)*2))
+  [[ -z "$run_through" ]] && tput clear
+}
 
 # Start script
 #tput smcup # Not supported in liveISO
