@@ -56,72 +56,83 @@ function mount_partitions() {
 #   Pre-Installation
 #
 #### Select the mirrors
-# Method to arrange mirrorlist(default: 'speed_offline')
-# speed_offline|speed_online|download|edit
-mir_sel_method="download"
-countries=(AT BE BA BG CN HR CZ DK FI FR DE GR HU IS IE IT JP KZ LT LU MK NL NC NO PL RO RS SK SI KR ES SE CH UA GB)
-  # COUNTRY              CODE SERVERS
-  # Australia              AU 12
-  # Austria                AT  4
-  # Bangladesh             BD  1
-  # Belarus                BY  4
-  # Belgium                BE  2
-  # Bosnia and Herzegovina BA  2
-  # Brazil                 BR  2
-  # Bulgaria               BG  8
-  # Canada                 CA 11
-  # Chile                  CL  1
-  # China                  CN 10
-  # Colombia               CO  2
-  # Croatia                HR  1
-  # Czechia                CZ 15
-  # Denmark                DK  5
-  # Ecuador                EC  5
-  # Finland                FI  3
-  # France                 FR 41
-  # Germany                DE 86
-  # Greece                 GR  7
-  # Hong Kong              HK  5
-  # Hungary                HU  2
-  # Iceland                IS  3
-  # India                  IN  3
-  # Indonesia              ID  2
-  # Ireland                IE  2
-  # Israel                 IL  2
-  # Italy                  IT  5
-  # Japan                  JP  9
-  # Kazakhstan             KZ  2
-  # Lithuania              LT  3
-  # Luxembourg             LU  1
-  # Macedonia              MK  4
-  # Mexico                 MX  2
-  # Netherlands            NL 17
-  # New Caledonia          NC  1
-  # New Zealand            NZ  2
-  # Norway                 NO  6
-  # Philippines            PH  1
-  # Poland                 PL  6
-  # Portugal               PT  4
-  # Qatar                  QA  2
-  # Romania                RO  9
-  # Russia                 RU  7
-  # Serbia                 RS  2
-  # Singapore              SG  5
-  # Slovakia               SK  4
-  # Slovenia               SI  3
-  # South Africa           ZA  3
-  # South Korea            KR  5
-  # Spain                  ES  2
-  # Sweden                 SE 14
-  # Switzerland            CH  7
-  # Taiwan                 TW  7
-  # Thailand               TH  5
-  # Turkey                 TR  3
-  # Ukraine                UA  6
-  # United Kingdom         GB  9
-  # United States          US 83
-  # Vietnam                VN  1
-num_of_mirrors=50 # How many mirrors are to be stored(default: 10)
+# https://xyne.archlinux.ca/projects/reflector/#help-message
+# --save option will be set by script
+reflector_args=(
+  # Servers in countries:
+  # "-c Australia"                # 12 servers
+  "-c Austria"                  # 4 servers
+  # "-c Bangladesh"               # 1 server
+  "-c Belarus"                  # 4 servers
+  "-c Belgium"                  # 2 servers
+  "-c BosniaandHerzegovina"     # 2 servers
+  # "-c Brazil"                   # 2 servers
+  "-c Bulgaria"                 # 8 servers
+  # "-c Canada"                   # 11 servers
+  # "-c Chile"                    # 1 server
+  "-c China"                    # 10 servers
+  # "-c Colombia"                 # 2 servers
+  "-c Croatia"                  # 1 server
+  "-c Czechia"                  # 15 servers
+  "-c Denmark"                  # 5 servers
+  # "-c Ecuador"                  # 5 servers
+  "-c Finland"                  # 3 servers
+  "-c France"                   # 41 servers
+  "-c Germany"                  # 86 servers
+  "-c Greece"                   # 7 servers
+  "-c HongKong"                 # 5 servers
+  "-c Hungary"                  # 2 servers
+  "-c Iceland"                  # 3 servers
+  # "-c India"                    # 3 servers
+  # "-c Indonesia"                # 2 servers
+  "-c Ireland"                  # 2 servers
+  # "-c Israel"                   # 2 servers
+  "-c Italy"                    # 5 servers
+  "-c Japan"                    # 9 servers
+  # "-c Kazakhstan"               # 2 servers
+  # "-c Lithuania"                # 3 servers
+  "-c Luxembourg"               # 1 server
+  "-c Macedonia"                # 4 servers
+  # "-c Mexico"                   # 2 servers
+  "-c Netherlands"              # 17 servers
+  "-c NewCaledonia"             # 1 server
+  # "-c NewZealand"               # 2 servers
+  "-c Norway"                   # 6 servers
+  # "-c Philippines"              # 1 server
+  "-c Poland"                   # 6 servers
+  "-c Portugal"                 # 4 servers
+  # "-c Qatar"                    # 2 servers
+  "-c Romania"                  # 9 servers
+  # "-c Russia"                   # 7 servers
+  "-c Serbia"                   # 2 servers
+  # "-c Singapore"                # 5 servers
+  "-c Slovakia"                 # 4 servers
+  "-c Slovenia"                 # 3 servers
+  # "-c SouthAfrica"              # 3 servers
+  "-c SouthKorea"               # 5 servers
+  "-c Spain"                    # 2 servers
+  "-c Sweden"                   # 14 servers
+  "-c Switzerland"              # 7 servers
+  # "-c Taiwan"                   # 7 servers
+  # "-c Thailand"                 # 5 servers
+  # "-c Turkey"                   # 3 servers
+  # "-c Ukraine"                  # 6 servers
+  "-c UnitedKingdom"            # 9 servers
+  # "-c UnitedStates"             # 83 servers
+  # "-c Vietnam"                  # 1 server
+
+  # Protocol
+  "-p https"
+
+  # The n fastest
+  "-f 50"
+
+  # The n most recently updated
+  "-l 50"
+
+  # Sort by {age,rate,country,score,delay}
+  "--sort delay"
+)
 
 #### Install the base packages
 # Additional packages to install
@@ -258,6 +269,8 @@ packages=(
   # Terminal & tools
   rxvt-unicode # urxvt is bae
   zsh-completions # For a better zsh
+  git # Version control
+  vim # Editor. BeCaUsE i Am HaRdCoRe
   #powerline powerline-vim
   stow # used for deploying dotfiles
   wget # because
@@ -314,6 +327,7 @@ packages=(
   lxappearance # Theme-manager(GTK, GTK+, Murrine, QT4,...)
   i3lock # Lock screen
   reflector # Mirror list
+  base-devel # Development package group
 
   # Applications
   gksu # Graphical sudo request
