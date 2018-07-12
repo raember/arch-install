@@ -6,6 +6,7 @@ source bashme/bashme
 
 # Basic settings
 loglevel=$LL_INFO
+logfilelevel=$LL_DEBUG
 log2file=1
 
 # Setup:
@@ -223,10 +224,9 @@ function set_keyboard_layout() {
           setfont $consfnt
           print_title "Font: $consfnt"
           newline
-          exec_cmd showconsolefont
-          top=$((top+19))
-          tput cup $top $left
-          echo "Lorem ipsum dolor sit amet."
+          tput hpa 0
+          showconsolefont
+          echo 'Lorem ipsum dolor sit amet.'
           read
         done
         setfont
