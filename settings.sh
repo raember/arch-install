@@ -6,37 +6,37 @@ run_through= # Don't let user navigate(default: '')
 post_prompt=1 # Wait after every part(default: '')
 
 ################################################################################
-#   Pre-Installation
+# 1 Pre-Installation
 #
-#### Set the keyboard layout
-keyboard_layout="de_CH-latin1"
+#### 1.1 Set the keyboard layout
+keyboard_layout= #"de_CH-latin1"
 console_font="Lat2-Terminus16.psfu.gz"
-  # Sans-serif-fonts with only moderate eyecancer:
+  # Sans-serif-fonts with only moderate eyecancer(I don't like serif fonts):
   # cybercafe.fnt.gz
   # gr928-8x16-thin.psfu.gz
   # greek-polytonic.psfu.gz
   # Lat2-Terminus16.psfu.gz
   # LatGrkCyr-8x16.psfu.gz
 
-#### Verify the boot mode
+#### 1.2 Verify the boot mode
 
-#### Connect to the Internet
+#### 1.3 Connect to the Internet
 ping_address="archlinux.org" # default: "8.8.8.8"
 
-#### Update the system clock
+#### 1.4 Update the system clock
 
-#### Partition the disks
+#### 1.5 Partition the disks
 disk="/dev/sda" # For convenience - irrelevant for script
 function partition_disks() {
   parted -s $disk \
     mklabel gpt \
-    mkpart primary fat32 1049B 578MB \
+    mkpart primary fat32 1MB 578MB \
     mkpart primary linux-swap 578MB 11.3GB \
     mkpart primary ext4 11.3GB 500GB
+  # Set up LVM/LUKS/RAID?
 }
 
-#### Format the partitions
-# Formatting script
+#### 1.6 Format the partitions
 function format_partitions() {
   mkfs.fat -F32 ${disk}1
   mkswap ${disk}2
@@ -44,8 +44,7 @@ function format_partitions() {
   mkfs.ext4 ${disk}3
 }
 
-#### Mount the file systems
-# Mounting script.
+#### 1.7 Mount the file systems
 function mount_partitions() {
   mount ${disk}3 /mnt
   mkdir -p /mnt/boot
@@ -53,111 +52,97 @@ function mount_partitions() {
 }
 
 ################################################################################
-#   Pre-Installation
+# 2 Pre-Installation
 #
-#### Select the mirrors
+#### 2.1 Select the mirrors
 # https://xyne.archlinux.ca/projects/reflector/#help-message
 # --save option will be set by script
 reflector_args=(
   # Servers in countries:
-  # "-c Australia"                # 12 servers
-  "-c Austria"                  # 4 servers
-  # "-c Bangladesh"               # 1 server
-  "-c Belarus"                  # 4 servers
-  "-c Belgium"                  # 2 servers
-  "-c BosniaandHerzegovina"     # 2 servers
-  # "-c Brazil"                   # 2 servers
-  "-c Bulgaria"                 # 8 servers
-  # "-c Canada"                   # 11 servers
-  # "-c Chile"                    # 1 server
-  "-c China"                    # 10 servers
-  # "-c Colombia"                 # 2 servers
-  "-c Croatia"                  # 1 server
-  "-c Czechia"                  # 15 servers
-  "-c Denmark"                  # 5 servers
-  # "-c Ecuador"                  # 5 servers
-  "-c Finland"                  # 3 servers
-  "-c France"                   # 41 servers
-  "-c Germany"                  # 86 servers
-  "-c Greece"                   # 7 servers
-  "-c HongKong"                 # 5 servers
-  "-c Hungary"                  # 2 servers
-  "-c Iceland"                  # 3 servers
-  # "-c India"                    # 3 servers
-  # "-c Indonesia"                # 2 servers
-  "-c Ireland"                  # 2 servers
-  # "-c Israel"                   # 2 servers
-  "-c Italy"                    # 5 servers
-  "-c Japan"                    # 9 servers
-  # "-c Kazakhstan"               # 2 servers
-  # "-c Lithuania"                # 3 servers
-  "-c Luxembourg"               # 1 server
-  "-c Macedonia"                # 4 servers
-  # "-c Mexico"                   # 2 servers
-  "-c Netherlands"              # 17 servers
-  "-c NewCaledonia"             # 1 server
-  # "-c NewZealand"               # 2 servers
-  "-c Norway"                   # 6 servers
-  # "-c Philippines"              # 1 server
-  "-c Poland"                   # 6 servers
-  "-c Portugal"                 # 4 servers
-  # "-c Qatar"                    # 2 servers
-  "-c Romania"                  # 9 servers
-  # "-c Russia"                   # 7 servers
-  "-c Serbia"                   # 2 servers
-  # "-c Singapore"                # 5 servers
-  "-c Slovakia"                 # 4 servers
-  "-c Slovenia"                 # 3 servers
-  # "-c SouthAfrica"              # 3 servers
-  "-c SouthKorea"               # 5 servers
-  "-c Spain"                    # 2 servers
-  "-c Sweden"                   # 14 servers
-  "-c Switzerland"              # 7 servers
-  # "-c Taiwan"                   # 7 servers
-  # "-c Thailand"                 # 5 servers
-  # "-c Turkey"                   # 3 servers
-  # "-c Ukraine"                  # 6 servers
-  "-c UnitedKingdom"            # 9 servers
-  # "-c UnitedStates"             # 83 servers
-  # "-c Vietnam"                  # 1 server
+  # "-c Australia"            # 12 servers
+  "-c Austria"              # 4 servers
+  # "-c Bangladesh"           # 1 server
+  "-c Belarus"              # 4 servers
+  "-c Belgium"              # 2 servers
+  "-c BosniaandHerzegovina" # 2 servers
+  # "-c Brazil"               # 2 servers
+  "-c Bulgaria"             # 8 servers
+  # "-c Canada"               # 11 servers
+  # "-c Chile"                # 1 server
+  "-c China"                # 10 servers
+  # "-c Colombia"             # 2 servers
+  "-c Croatia"              # 1 server
+  "-c Czechia"              # 15 servers
+  "-c Denmark"              # 5 servers
+  # "-c Ecuador"              # 5 servers
+  "-c Finland"              # 3 servers
+  "-c France"               # 41 servers
+  "-c Germany"              # 86 servers
+  "-c Greece"               # 7 servers
+  "-c HongKong"             # 5 servers
+  "-c Hungary"              # 2 servers
+  "-c Iceland"              # 3 servers
+  # "-c India"                # 3 servers
+  # "-c Indonesia"            # 2 servers
+  "-c Ireland"              # 2 servers
+  # "-c Israel"               # 2 servers
+  "-c Italy"                # 5 servers
+  "-c Japan"                # 9 servers
+  # "-c Kazakhstan"           # 2 servers
+  # "-c Lithuania"            # 3 servers
+  "-c Luxembourg"           # 1 server
+  "-c Macedonia"            # 4 servers
+  # "-c Mexico"               # 2 servers
+  "-c Netherlands"          # 17 servers
+  "-c NewCaledonia"         # 1 server
+  # "-c NewZealand"           # 2 servers
+  "-c Norway"               # 6 servers
+  # "-c Philippines"          # 1 server
+  "-c Poland"               # 6 servers
+  "-c Portugal"             # 4 servers
+  # "-c Qatar"                # 2 servers
+  "-c Romania"              # 9 servers
+  # "-c Russia"               # 7 servers
+  "-c Serbia"               # 2 servers
+  # "-c Singapore"            # 5 servers
+  "-c Slovakia"             # 4 servers
+  "-c Slovenia"             # 3 servers
+  # "-c SouthAfrica"          # 3 servers
+  "-c SouthKorea"           # 5 servers
+  "-c Spain"                # 2 servers
+  "-c Sweden"               # 14 servers
+  "-c Switzerland"          # 7 servers
+  # "-c Taiwan"               # 7 servers
+  # "-c Thailand"             # 5 servers
+  # "-c Turkey"               # 3 servers
+  # "-c Ukraine"              # 6 servers
+  "-c UnitedKingdom"        # 9 servers
+  # "-c UnitedStates"         # 83 servers
+  # "-c Vietnam"              # 1 server
 
-  # Protocol
-  "-p https"
-
-  # The n fastest
-  "-f 50"
-
-  # The n most recently updated
-  "-l 50"
-
-  # Sort by {age,rate,country,score,delay}
-  "--sort delay"
+  "-p https" # Protocol (http/https)
+  "-f 50" # The n fastest
+  "-l 50" # The n most recently updated
+  "--sort delay" # Sort by {age,rate,country,score,delay}
 )
 
-#### Install the base packages
-# Additional packages to install
-# default: (asks)
-additional_packages="base-devel git vim"
+#### 2.2 Install the base packages
 
 
 ################################################################################
-#   Configure the system
+# 3 Configure the system
 #
-#### Fstab ("U" = UUID, "L" = Label)
-# default: (asks)
-fstab_identifier="U"
+#### 3.1 Fstab
+fstab_identifier='U' # fstab file uses UUID('U') or labels('L')(default: 'U')
 
-#### Chroot
-# Copy scripts to new system
-# default: true
-copy_scripts_to_new_system=true
+#### 3.2 Chroot
 
-#### Time zone
+#### 3.3 Time zone
 # default: (asks)
 region="Europe"
 city="Zurich"
 
-#### Locale
+#### 3.4 Locale
 # default: (prompts to edit file)
 locales=(
   "de_CH.UTF-8 UTF-8"
@@ -171,7 +156,7 @@ locales=(
 )
 lang="de_CH.UTF-8"
 
-#### Hostname
+#### 3.5 Hostname
 # default: (asks)
 hostname="turing"
 hosts_redirects=(
@@ -180,7 +165,7 @@ hosts_redirects=(
   "127.0.1.1	$hostname.localdomain"
 )
 
-#### Network configuration
+#### 3.6 Network configuration
 # default: true
 prompt_to_manage_manually=true
 
@@ -192,13 +177,21 @@ wireless_support=true
 # default: (asks)
 dialog=true
 
-#### Initramfs
+#### 3.7 Initramfs
 # default: (asks)
 modify_initramfs=false
 
+#### 3.8 Root password
+
+#### 3.9 Boot loader
+
 
 ################################################################################
-#   Package-Installation & Constomization
+# 4 Reboot
+
+
+################################################################################
+# 5 Post-Installation
 #
 #### Preparation
 # Username for which the preparations are intended for(NOT root)

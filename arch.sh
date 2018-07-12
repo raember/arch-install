@@ -193,7 +193,12 @@ function set_keyboard_layout() {
     prepare_pane
     print_title "1.1 Set the keyboard layout"
     if [[ -z "$keyboard_layout" ]]; then
-      local -a options=($(ls /usr/share/kbd/keymaps/**/*.map.gz | grep -oE '[^/]*$' | sed 's/\.map\.gz//g'))
+      local -a options=(
+        $(ls /usr/share/kbd/keymaps/**/*.map.gz | \
+          grep -oE '[^/]*$' | \
+          sed 's/\.map\.gz//g' | \
+          sort)
+        )
       list_options
       keyboard_layout=us
       [[ -z "$run_through" ]] && read_answer "Enter option (us): " keyboard_layout us
@@ -480,6 +485,7 @@ select_the_mirrors() {
         2)
           push suggestion 0
           vim "$mirrorlist"
+          break
           ;;
         *)
           newline
@@ -508,7 +514,7 @@ function run_reflector() {
   newline
   if ! type foo &>/dev/null; then
     info 'Reflector not installed. Installing now.'
-    if ! exec_cmd pacman -Sy reflector; then
+    if ! exec_cmd pacman -Sy reflector --color=always --noconfirm; then
       newline
       error "Couldn't install reflector."
       return
@@ -530,7 +536,7 @@ install_the_base_packages() {
   newline
   if [[ "$install_now" == "y" ]]; then
     info "Executing ${BOLD}format_partitions${RESET}:"
-    if ! exec_cmd pacstrap /mnt base; then
+    if ! exec_cmd pacstrap /mnt base --color=always; then
       newline
       error 'Something went wrong.'
     else
@@ -614,56 +620,58 @@ function configure_the_system() {
 
 # 3.1
 fstab() {
-    print_section "Fstab"
-    print_status "Generating fstab file for the new system."
-    while : ; do
-        if [ $fstab_identifier == "" ] ; then
-            print_prompt "Do you want to use UUIDs(u/U) or labels(l/L)?" "[U/l] "
-            fstab_identifier=$answer
-        fi
-        [[ $fstab_identifier == "" ]] && fstab_identifier="u"
-        case $fstab_identifier in
-            [uU])
-                print_status "Using UUIDs to generate the fstab file..."
-                fstab_identifier="U"
-                break;;
-            [lL])
-                print_status "Using labels to generate the fstab file..."
-                fstab_identifier="L"
-                break;;
-            *)
-                print_neg "Please write either ${format_code}u/U${format_no_code}${format_negative} or ${format_code}l/L${format_no_code}${format_negative}!";;
-        esac
-    done
-    [ "$fstab_file" = "" ] && fstab_file="/mnt/etc/fstab"
-    print_cmd_invisible "genfstab -$fstab_identifier /mnt >> '$fstab_file'" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished writing to the fstab file"
-    else
-        print_fail "Failed writing to the fstab file"
+  while : ; do
+    prepare_pane
+    print_title "3.1 Fstab"
+    if [[ -z $fstab_identifier ]] ; then
+      fstab_identifier="u"
+      [[ -z "$run_through" ]] && read_answer "Enter option (us): " fstab_identifier "u"
+      read_answer "Use UUIDs(u/U) or labels(l/L)?" answer "U"
+      fstab_identifier=$answer
     fi
-    print_end
+    newline
+    case "$fstab_identifier" in
+      [uU])
+        info "Using UUIDs to generate the fstab file..."
+        fstab_identifier="U"
+        ;;
+      [lL])
+        info "Using labels to generate the fstab file..."
+        fstab_identifier="L"
+        ;;
+      *)
+        error "Please choose an option from above."
+        tput rc
+        tput dl 2
+        continue
+    esac
+    break
+  done
+  if ! exec_cmd "genfstab -$fstab_identifier /mnt | tee /mnt/etc/fstab"; then
+    error "Couldn't generate fstab-file."
+  fi
 }
 
-# 10
+# 3.2
 chroot() {
-    print_section "Chroot"
-    print_status "Change root into the new system, cd into ${format_code}/root${format_no_code} and resume this script with ${format_code}./$(basename $0) -c${format_no_code}"
-    [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
-    if [ "$copy_scripts_to_new_system" = true ] ; then
-        for file in "${script_files[@]}"; do
-            [ -f $file ] && continue
-            print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
-            [ "$success" != true ] && print_fail "Couldn't copy file $file"
-        done
-        print_status "Copying mirrorlist to new location"
-        print_cmd_invisible "cp '/etc/pacman.d/mirrorlist' '/mnt/etc/pacman.d/mirrorlist'" success
-    fi
-    print_status "    -> ${format_code}arch-chroot /mnt"
-    print_status "    -> ${format_code}cd${format_no_code}"
-    print_status "    -> ${format_code}./$(basename $0) -c${format_no_code}"
-    print_end
-    exit 0
+  prepare_pane
+  print_title "3.2 Chroot"
+  print_status "Change root into the new system, cd into ${format_code}/root${format_no_code} and resume this script with ${format_code}./$(basename $0) -c${format_no_code}"
+  [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
+  if [ "$copy_scripts_to_new_system" = true ] ; then
+    for file in "${script_files[@]}"; do
+      [ -f $file ] && continue
+      print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
+      [ "$success" != true ] && print_fail "Couldn't copy file $file"
+    done
+    print_status "Copying mirrorlist to new location"
+    print_cmd_invisible "cp '/etc/pacman.d/mirrorlist' '/mnt/etc/pacman.d/mirrorlist'" success
+  fi
+  print_status "    -> ${format_code}arch-chroot /mnt"
+  print_status "    -> ${format_code}cd${format_no_code}"
+  print_status "    -> ${format_code}./$(basename $0) -c${format_no_code}"
+  print_end
+  exit 0
 }
 
 # 11
@@ -1083,6 +1091,7 @@ function list_options() {
   local first=1
   local option
   trace "Printing ${#options[@]} options."
+  newline
   for option in "${options[@]}"; do
     width=$((width+${#option}+2))
     if [[ -n "$first" ]]; then
@@ -1115,11 +1124,11 @@ function read_answer() {
 function exec_cmd() {
   debug "Executing: $*"
   tput hpa $left
-  echo " ${BOLD}${FG_LRED}\$ ${RESET}${BOLD}$*${RESET}"
+  echo " ${BOLD}${FG_YELLOW}\$ ${RESET}${BOLD}$*${RESET}"
   $* 2>&1 | {
     local -i l=1
     while read line; do
-      printf "${BG_GRAY}${FG_BLACK}%4d:${RESET}" $l
+      printf "${FG_LGRAY}${FG_BLACK}%4d:${RESET}" $l
       tput hpa 5
       echo "$line"
       debug "           $line"
