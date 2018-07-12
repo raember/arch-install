@@ -138,7 +138,6 @@ fstab_identifier='U' # fstab file uses UUID('U') or labels('L')(default: 'U')
 #### 3.2 Chroot
 
 #### 3.3 Time zone
-# default: (asks)
 region="Europe"
 city="Zurich"
 

@@ -662,11 +662,13 @@ function chroot() {
   prepare_pane
   print_title "3.2 Chroot"
   info "Copying the files over to the child system."
-  exec_cmd mkdir -p /mnt/bashme
-  exec_cmd cp "./bashme/bashme" "/mnt/bashme/"
-  exec_cmd cp "./{arch.sh,$logfile}" "/mnt/"
-  exec_cmd arch-chroot -c "./arch.sh -l $logfile"
-  exit 0
+  exec_cmd mkdir -p /mnt/root/bashme
+  exec_cmd cp "./bashme/bashme" "/mnt/root/bashme/"
+  exec_cmd cp "./{arch.sh,$logfile,settings.sh}" "/mnt/root/"
+  local oldlogfile="$logfile"
+  logfile="/mnt/root/$logfile"
+  exec_cmd "(echo \"cd\" && echo \"./arch.sh -cl $oldlogfile\") | arch-chroot"
+  reboot # We're coming back from the "Reboot" routine
 }
 
 # 3.3
