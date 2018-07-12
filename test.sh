@@ -641,4 +641,4 @@ chown() { return; }
 
 test=true
 
-source arch.sh
+source arch.sh $*

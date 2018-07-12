@@ -21,10 +21,11 @@ USAGE=(
   '[OPTION]...    Execute script with arguments.'
   '               Show this help page.'
 )
-define_opt '_help'  '-h' '--help'      ''  'Display this help text.'
-define_opt '_ver'   '-v' '--version'   ''  'Display the VERSION.'
+define_opt '_help'   '-h' '--help'    ''     'Display this help text.'
+define_opt '_ver'    '-v' '--version' ''     'Display the VERSION.'
 define_opt 'logfile' '-l' '--logfile' 'file' "Change logfile to ${ITALIC}file${RESET}."
-DESCRIPTION="This script simplifies the installation of Arch Linux. it can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
+define_opt '_chroot' '-c' '--chroot'  ''     "Continue script from after ${ITALIC}chroot${RESET}."
+DESCRIPTION="This script simplifies the installation of Arch Linux. It can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
 As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
 
@@ -74,7 +75,7 @@ function main() {
     prepare_pane
     declare -i top
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "Arch Linux Installation"
-    [[ -z "$run_through" ]] && enumerate_options "Quit" \
+    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && enumerate_options "Quit" \
                 "1 Pre-Installation" \
                 "2 Installation" \
                 "3 Configure the system" \
@@ -82,7 +83,8 @@ function main() {
                 "5 Post-Installation"
     while : ; do
       answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
+      [[ -n "$_chroot" ]] && answer=3
       case "$answer" in
         0)
           return
@@ -556,7 +558,7 @@ function configure_the_system() {
   while : ; do
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "3 Configure the system"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
+    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && enumerate_options "Return to Main" \
                 "3.1 Fstab" \
                 "3.2 Chroot" \
                 "3.3 Time zone" \
@@ -567,7 +569,9 @@ function configure_the_system() {
                 "3.8 Boot loader"
     while : ; do
       answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
+      [[ -n "$_chroot" ]] && answer=3
+      _chroot=
       case "$answer" in
         0)
           return
@@ -620,7 +624,7 @@ function configure_the_system() {
 }
 
 # 3.1
-fstab() {
+function fstab() {
   while : ; do
     prepare_pane
     print_title "3.1 Fstab"
@@ -654,69 +658,62 @@ fstab() {
 }
 
 # 3.2
-chroot() {
+function chroot() {
   prepare_pane
   print_title "3.2 Chroot"
-  print_status "Change root into the new system, cd into ${format_code}/root${format_no_code} and resume this script with ${format_code}./$(basename $0) -c${format_no_code}"
-  [ "$copy_scripts_to_new_system" = "" ] && copy_scripts_to_new_system=true
-  if [ "$copy_scripts_to_new_system" = true ] ; then
-    for file in "${script_files[@]}"; do
-      [ -f $file ] && continue
-      print_cmd_invisible "cp './$file' '/mnt/root/$file'" success
-      [ "$success" != true ] && print_fail "Couldn't copy file $file"
-    done
-    print_status "Copying mirrorlist to new location"
-    print_cmd_invisible "cp '/etc/pacman.d/mirrorlist' '/mnt/etc/pacman.d/mirrorlist'" success
-  fi
-  print_status "    -> ${format_code}arch-chroot /mnt"
-  print_status "    -> ${format_code}cd${format_no_code}"
-  print_status "    -> ${format_code}./$(basename $0) -c${format_no_code}"
-  print_end
+  info "Copying the files over to the child system."
+  exec_cmd mkdir -p /mnt/bashme
+  exec_cmd cp "./bashme/bashme" "/mnt/bashme/"
+  exec_cmd cp "./{arch.sh,$logfile}" "/mnt/"
+  exec_cmd arch-chroot -c "./arch.sh -l $logfile"
   exit 0
 }
 
-# 11
-time_zone() {
-    print_section "Time zone"
-    if [[ $region == "" ]] ; then
-        print_status "Choose from the following regions:"
-        print_cmd "ls /usr/share/zoneinfo/ -lA | grep ^d | cut -d' ' -f12" success
-        [ "$success" != true ] && print_fail "Something went horribly wrong"
-        while : ; do
-            print_prompt "Please choose a region" "> "
-            region=$answer
-            print_check_file "/usr/share/zoneinfo/$region" success
-            [ "$success" = true ] && break
-            print_neg "Please choose a region"
-        done
-    fi
-    if [[ $city == "" ]] ; then
-        print_status "Choose from the following cities:"
-        print_cmd "ls /usr/share/zoneinfo/$region/ -mA" success
-        [ "$success" != true ] && print_fail "Something went horribly wrong"
-        while : ; do
-            print_prompt "Please choose a city" "> "
-            city=$answer
-            print_check_file "/usr/share/zoneinfo/$region/$city" success
-            [ "$success" = true ] && break
-            print_neg "Please choose a city"
-        done
-    fi
-    print_status "Setting up the symbolic link"
-    print_cmd_invisible "ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished setting up the symbolic link"
-    else
-        print_fail "Failed setting up the symbolic link"
-    fi
-    print_status "Generating ${format_code}/etc/adjtime${format_no_code}"
-    print_cmd_invisible "hwclock --systohc" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished generating ${format_code}/etc/adjtime${format_no_code}"
-    else
-        print_fail "Failed generating ${format_code}/etc/adjtime${format_no_code}"
-    fi
-    print_end
+# 3.3
+function time_zone() {
+  prepare_pane
+  print_title "3.3 Time zone"
+  pause
+
+  if [[ $region == "" ]] ; then
+      print_status "Choose from the following regions:"
+      print_cmd "ls /usr/share/zoneinfo/ -lA | grep ^d | cut -d' ' -f12" success
+      [ "$success" != true ] && print_fail "Something went horribly wrong"
+      while : ; do
+          print_prompt "Please choose a region" "> "
+          region=$answer
+          print_check_file "/usr/share/zoneinfo/$region" success
+          [ "$success" = true ] && break
+          print_neg "Please choose a region"
+      done
+  fi
+  if [[ $city == "" ]] ; then
+      print_status "Choose from the following cities:"
+      print_cmd "ls /usr/share/zoneinfo/$region/ -mA" success
+      [ "$success" != true ] && print_fail "Something went horribly wrong"
+      while : ; do
+          print_prompt "Please choose a city" "> "
+          city=$answer
+          print_check_file "/usr/share/zoneinfo/$region/$city" success
+          [ "$success" = true ] && break
+          print_neg "Please choose a city"
+      done
+  fi
+  print_status "Setting up the symbolic link"
+  print_cmd_invisible "ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime" success
+  if [ "$success" = true ] ; then
+      print_pos "Finished setting up the symbolic link"
+  else
+      print_fail "Failed setting up the symbolic link"
+  fi
+  print_status "Generating ${format_code}/etc/adjtime${format_no_code}"
+  print_cmd_invisible "hwclock --systohc" success
+  if [ "$success" = true ] ; then
+      print_pos "Finished generating ${format_code}/etc/adjtime${format_no_code}"
+  else
+      print_fail "Failed generating ${format_code}/etc/adjtime${format_no_code}"
+  fi
+  print_end
 }
 
 # 12
@@ -1125,11 +1122,11 @@ function read_answer() {
 function exec_cmd() {
   debug "Executing: $*"
   tput hpa $left
-  echo " ${BOLD}${FG_YELLOW}\$ ${RESET}${BOLD}$*${RESET}"
+  echo " ${BOLD}${FG_RED}\$ ${RESET}${BOLD}$*${RESET}"
   $* 2>&1 | {
     local -i l=1
     while read line; do
-      printf "${FG_LGRAY}${FG_BLACK}%4d:${RESET}" $l
+      printf "${BG_LGRAY}${FG_BLACK}%4d:${RESET}" $l
       tput hpa 5
       echo "$line"
       debug "           $line"
