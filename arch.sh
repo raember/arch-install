@@ -675,100 +675,95 @@ function chroot() {
 function time_zone() {
   prepare_pane
   print_title "3.3 Time zone"
-  pause
+  if [[ -z $region ]] ; then
+    # timedatectl list-timezones | cut -d'/' -f1 | uniq
+    local -a options=($(
+      ls -l /usr/share/zoneinfo/ | \
+      grep -E '^d.*\ [A-Z][a-z]+$' | \
+      sed 's/^d.*:[0-9][0-9]\ //g'
+    ))
+    list_options
+    region="Asia"
+    [[ -z "$run_through" ]] && read_answer "Enter option (Asia): " region "Asia"
+  fi
+  newline
+  info "Time zone region chosen to be '$region'."
+  if [[ -z $city ]] ; then
+    local -a options=($(ls /usr/share/zoneinfo/$region/))
+    list_options
+    city="Tokyo"
+    [[ -z "$run_through" ]] && read_answer "Enter option (Tokyo): " city "Tokyo"
+  fi
+  newline
+  info "Time zone city chosen to be '$city'."
+  newline
+  if ! exec_cmd timedatectl set-timezone $region/$city; then
+    newline
+    error "Couldn't set time zone."
+    return
+  fi
+  exec_cmd hwclock --systohc
+  newline
+  info 'Done.'
+}
 
-  if [[ $region == "" ]] ; then
-      print_status "Choose from the following regions:"
-      print_cmd "ls /usr/share/zoneinfo/ -lA | grep ^d | cut -d' ' -f12" success
-      [ "$success" != true ] && print_fail "Something went horribly wrong"
-      while : ; do
-          print_prompt "Please choose a region" "> "
-          region=$answer
-          print_check_file "/usr/share/zoneinfo/$region" success
-          [ "$success" = true ] && break
-          print_neg "Please choose a region"
-      done
+# 3.4
+function locale() {
+  prepare_pane
+  print_title "3.4 Locale"
+  if [[ ${#locales[@]} == 0 ]]; then
+    locales+=("en_US.UTF-8 UTF-8")
   fi
-  if [[ $city == "" ]] ; then
-      print_status "Choose from the following cities:"
-      print_cmd "ls /usr/share/zoneinfo/$region/ -mA" success
-      [ "$success" != true ] && print_fail "Something went horribly wrong"
-      while : ; do
-          print_prompt "Please choose a city" "> "
-          city=$answer
-          print_check_file "/usr/share/zoneinfo/$region/$city" success
-          [ "$success" = true ] && break
-          print_neg "Please choose a city"
-      done
-  fi
-  print_status "Setting up the symbolic link"
-  print_cmd_invisible "ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime" success
-  if [ "$success" = true ] ; then
-      print_pos "Finished setting up the symbolic link"
+
+  if [ "$locales" = "" ] ; then
+    print_status "Uncomment needed localizations"
+    print_prompt "Opening ${format_code}/etc/locale.gen${format_no_code} with vim" ""
+    print_cmd "vim /etc/locale.gen" success
+    if [ "$success" = true ] ; then
+      print_pos "Finished editing locale.gen"
+    else
+      print_fail "Failed editing locale.gen"
+    fi
   else
-      print_fail "Failed setting up the symbolic link"
+    file="/etc/locale.gen"
+    [ "$test" = true ] && file="/dev/null"
+    for new_locale in "${locales[@]}"; do
+      echo "$new_locale" >> $file
+    done
+    print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
   fi
-  print_status "Generating ${format_code}/etc/adjtime${format_no_code}"
-  print_cmd_invisible "hwclock --systohc" success
+  print_status "Generating localizations"
+  print_cmd "locale-gen" success
   if [ "$success" = true ] ; then
-      print_pos "Finished generating ${format_code}/etc/adjtime${format_no_code}"
+    print_pos "Finished generating localizations"
   else
-      print_fail "Failed generating ${format_code}/etc/adjtime${format_no_code}"
+    print_fail "Failed generating localizations"
+  fi
+  print_status "Setting ${format_code}LANG${format_no_code}-variable to ${format_variable}$lang"
+  file="/etc/locale.conf"
+  [ "$test" = true ] && file="/dev/null"
+  print_cmd_invisible "echo 'LANG=$lang' > $file" success
+  if [ "$success" = true ] ; then
+    print_pos "Finished setting ${format_code}LANG${format_no_code}${format_positive}-variable"
+  else
+    print_fail "Failed setting ${format_code}LANG${format_no_code}${format_negative}-variable"
+  fi
+  print_status "Setting keyboard layout for the new system"
+  if [ "$keyboard_layout" = "" ] ; then
+    print_prompt "Please set the desired keyboard layout:" "> "
+    keyboard_layout=$answer
+  fi
+  file="/etc/vconsole.conf"
+  [ "$test" = true ] && file="/dev/null"
+  print_cmd_invisible "echo 'KEYMAP=$keyboard_layout' > $file" success
+  if [ "$success" = true ] ; then
+    print_pos "Finished setting keyboard layout for the new system"
+  else
+    print_fail "Failed setting keyboard layout for the new system"
   fi
   print_end
 }
-
-# 12
-locale() {
-    print_section "Locale"
-    if [ "$locales" = "" ] ; then
-        print_status "Uncomment needed localizations"
-        print_prompt "Opening ${format_code}/etc/locale.gen${format_no_code} with vim" ""
-        print_cmd "vim /etc/locale.gen" success
-        if [ "$success" = true ] ; then
-            print_pos "Finished editing locale.gen"
-        else
-            print_fail "Failed editing locale.gen"
-        fi
-    else
-        file="/etc/locale.gen"
-        [ "$test" = true ] && file="/dev/null"
-        for new_locale in "${locales[@]}"; do
-            echo "$new_locale" >> $file
-        done
-        print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
-    fi
-    print_status "Generating localizations"
-    print_cmd "locale-gen" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished generating localizations"
-    else
-        print_fail "Failed generating localizations"
-    fi
-    print_status "Setting ${format_code}LANG${format_no_code}-variable to ${format_variable}$lang"
-    file="/etc/locale.conf"
-    [ "$test" = true ] && file="/dev/null"
-    print_cmd_invisible "echo 'LANG=$lang' > $file" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished setting ${format_code}LANG${format_no_code}${format_positive}-variable"
-    else
-        print_fail "Failed setting ${format_code}LANG${format_no_code}${format_negative}-variable"
-    fi
-    print_status "Setting keyboard layout for the new system"
-    if [ "$keyboard_layout" = "" ] ; then
-        print_prompt "Please set the desired keyboard layout:" "> "
-        keyboard_layout=$answer
-    fi
-    file="/etc/vconsole.conf"
-    [ "$test" = true ] && file="/dev/null"
-    print_cmd_invisible "echo 'KEYMAP=$keyboard_layout' > $file" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished setting keyboard layout for the new system"
-    else
-        print_fail "Failed setting keyboard layout for the new system"
-    fi
-    print_end
-}
+declare -a locales=()
 
 # 13
 hostname() {
@@ -1106,7 +1101,6 @@ function list_options() {
     printf '%s' "$option"
   done
   newline
-  newline
 }
 function read_answer() {
   trace "Reading answer."
@@ -1139,7 +1133,7 @@ function exec_cmd() {
   return $retval
 }
 function prepare_pane() {
-  [[ -n "$run_through" ]] && left=$(((${#FUNCNAME[@]}-4)*2))
+  [[ -n "$run_through" ]] && left=$(((${#FUNCNAME[@]}-3)*2))
   [[ -z "$run_through" ]] && tput clear
 }
 

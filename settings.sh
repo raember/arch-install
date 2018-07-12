@@ -142,9 +142,9 @@ region="Europe"
 city="Zurich"
 
 #### 3.4 Locale
-# default: (prompts to edit file)
-locales=(
-  "de_CH.UTF-8 UTF-8"
+LANG="de_CH.UTF-8"
+locales=( # default: "en_US.UTF-8 UTF-8"
+  "$LANG"
   "de_CH ISO-8859-1"
   "ja_JP.EUC-JP EUC-JP"
   "ja_JP.UTF-8 UTF-8"
@@ -153,7 +153,6 @@ locales=(
   "en_US.UTF-8 UTF-8"
   "en_US ISO-8859-1"
 )
-lang="de_CH.UTF-8"
 
 #### 3.5 Hostname
 # default: (asks)
