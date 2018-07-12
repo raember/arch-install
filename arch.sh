@@ -23,7 +23,7 @@ USAGE=(
 )
 define_opt '_help'  '-h' '--help'      ''  'Display this help text.'
 define_opt '_ver'   '-v' '--version'   ''  'Display the VERSION.'
-define_opt 'resume' '-r' '--resume-at' 'n' "Resume script at entry point ${ITALIC}n${RESET}."
+define_opt 'logfile' '-l' '--logfile' 'file' "Change logfile to ${ITALIC}file${RESET}."
 DESCRIPTION="This script simplifies the installation of Arch Linux. it can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
 As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
@@ -327,10 +327,11 @@ function update_the_system_clock() {
 function partition_the_disks() {
   prepare_pane
   print_title "1.5 Partition the disks"
+  newline
   exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
   newline
   local partition_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should partitioning command be run now? [y/N]: " partition_now n
+  [[ -z "$run_through" ]] && read_answer "Should partitioning command be run now? [Y/n]: " partition_now y
   newline
   if [[ "$partition_now" == "y" ]]; then
     info "Executing command:"
@@ -356,7 +357,7 @@ function format_the_partitions() {
   newline
   exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
   local format_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the formatting command be run now? [y/N]: " format_now n
+  [[ -z "$run_through" ]] && read_answer "Should the formatting command be run now? [Y/n]: " format_now y
   newline
   if [[ "$format_now" == "y" ]]; then
     info "Executing ${BOLD}format_partitions${RESET}:"
@@ -377,7 +378,7 @@ function mount_the_file_systems() {
   prepare_pane
   print_title "1.7 Mount the file systems"
   local mount_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the mounting command be run now? [y/N]: " mount_now n
+  [[ -z "$run_through" ]] && read_answer "Should the mounting command be run now? [Y/n]: " mount_now y
   newline
   if [[ "$mount_now" == "y" ]]; then
     info "Executing ${BOLD}mount_partitions${RESET}:"
@@ -532,7 +533,7 @@ install_the_base_packages() {
   prepare_pane
   print_title "2.2 Install the base packages"
   local install_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the base package installation be run now? [y/N]: " install_now n
+  [[ -z "$run_through" ]] && read_answer "Should the base package installation be run now? [Y/n]: " install_now y
   newline
   if [[ "$install_now" == "y" ]]; then
     info "Executing ${BOLD}format_partitions${RESET}:"
@@ -1109,7 +1110,7 @@ function list_options() {
   newline
 }
 function read_answer() {
-  debug "Reading answer."
+  trace "Reading answer."
   tput sc
   newline
   printf "$1"
