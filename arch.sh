@@ -21,10 +21,11 @@ USAGE=(
   '[OPTION]...    Execute script with arguments.'
   '               Show this help page.'
 )
-define_opt '_help'   '-h' '--help'    ''     'Display this help text.'
-define_opt '_ver'    '-v' '--version' ''     'Display the VERSION.'
-define_opt 'logfile' '-l' '--logfile' 'file' "Change logfile to ${ITALIC}file${RESET}."
-define_opt '_chroot' '-c' '--chroot'  ''     "Continue script from after ${ITALIC}chroot${RESET}."
+define_opt '_help'       '-h' '--help'         ''     'Display this help text.'
+define_opt '_ver'        '-v' '--version'      ''     'Display the VERSION.'
+define_opt 'logfile'     '-l' '--logfile'      'file' "Change logfile to ${ITALIC}file${RESET}."
+define_opt '_chroot'     '-c' '--chroot'       ''     "Continue script from after ${ITALIC}chroot${RESET}."
+define_opt 'run_through' '-r' '--run-through'  ''     "Don't let user navigate."
 DESCRIPTION="This script simplifies the installation of Arch Linux. It can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
 As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
@@ -661,14 +662,16 @@ function fstab() {
 function chroot() {
   prepare_pane
   print_title "3.2 Chroot"
+  newline
   info "Copying the files over to the child system."
   exec_cmd mkdir -p /mnt/root/bashme
   exec_cmd cp "./bashme/bashme" "/mnt/root/bashme/"
-  exec_cmd cp "./{arch.sh,$logfile,settings.sh}" "/mnt/root/"
-  local oldlogfile="$logfile"
-  logfile="/mnt/root/$logfile"
-  exec_cmd "(echo \"cd\" && echo \"./arch.sh -cl $oldlogfile\") | arch-chroot"
-  reboot # We're coming back from the "Reboot" routine
+  exec_cmd cp "./{arch.sh,$(basename $logfile),settings.sh}" "/mnt/root/"
+  local oldlogfile="$(basename $logfile)"
+  [[ -z "$test_script" ]] && logfile="/mnt/root/$logfile"
+  local cmd="#cd
+./arch.sh -cl $oldlogfile"
+  exec_cmd "arch-chroot /mnt bash --init-file <(echo \"$cmd\")"
 }
 
 # 3.3
@@ -711,154 +714,116 @@ function time_zone() {
 function locale() {
   prepare_pane
   print_title "3.4 Locale"
-  if [[ ${#locales[@]} == 0 ]]; then
-    locales+=("en_US.UTF-8 UTF-8")
+  newline
+  if [ ${#locales[@]} -eq 0 ]; then
+    info 'Editing /etc/locale.gen file.'
+    pause
+    vim /etc/locale.gen
+  else
+    info 'Uncommenting locales.'
+    local locale
+    for locale in "${locales[@]}"; do
+      if ! exec_cmd sed -i "'s/^#$locale/$locale/g'" /etc/locale.gen; then
+        error "Couldn't uncomment $locale."
+        return
+      fi
+    done
   fi
+  newline
+  info 'Running locale generator.'
+  if ! exec_cmd locale-gen; then
+    error "Couldn't run locale generator."
+    return
+  fi
+  newline
+  info "Setting ${ITALICS}LANG${RESET}-variable."
+  local file="/etc/locale.conf"
+  [[ -n "$test_script" ]] && file="/dev/null"
+  if ! exec_cmd "echo \"LANG=$LANG\" > $file"; then
+    newline
+    error "Couldn't persist ${ITALICS}LANG${RESET} variable."
+    return
+  fi
+  if [[ -n "$keyboard_layout" ]]; then
+    newline
+    info "Setting ${ITALICS}KEYMAP${RESET}-variable."
+    local file="/etc/vconsole.conf"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo \"KEYMAP=$keyboard_layout\" > $file"; then
+      newline
+      error "Couldn't persist ${ITALICS}KEYMAP${RESET} variable."
+      return
+    fi
+  fi
+}
 
-  if [ "$locales" = "" ] ; then
-    print_status "Uncomment needed localizations"
-    print_prompt "Opening ${format_code}/etc/locale.gen${format_no_code} with vim" ""
-    print_cmd "vim /etc/locale.gen" success
+# 3.5
+network_configuration() {
+  prepare_pane
+  print_title "3.5 Network Configuration"
+  newline
+  [[ -n "$run_through" ]] && [[ -z "$hostname" ]] && hostname="arch"
+  [[ -z "$hostname" ]] && read_answer "Please specify a host name [arch]: " hostname "arch"
+  info 'Setting host name.'
+  local file="/etc/hostname"
+  [[ -n "$test_script" ]] && file="/dev/null"
+  if ! exec_cmd "echo \"$hostname\" > $file"; then
+    newline
+    error "Couldn't save host name."
+    return
+  fi
+  newline
+  info 'Writing hosts file.'
+  [[ -z "$perm_ip" ]] && perm_ip="127.0.1.1"
+  local value="$(cat << eof
+127.0.0.1	localhost
+::1		localhost
+$perm_ip	$hostname.localdomain	$hostname
+eof
+)"
+  local file="/etc/hosts"
+  [[ -n "$test_script" ]] && file="/dev/null"
+  if ! exec_cmd "echo \"$value\" > $file"; then
+    newline
+    error "Couldn't write hosts file."
+    return
+  fi
+}
+
+# 3.6
+initramfs() {
+  prepare_pane
+  print_title "3.5 Initramfs"
+  newline
+
+  
+  [ "$modify_initramfs" = "" ] && print_prompt_boolean "Do you want to edit the ${format_code}mkinitpcio.conf${format_no_code} file?" "y" modify_initramfs
+  if [ "$modify_initramfs" = true ] ; then
+    print_status "Editing the ${format_code}mkinitpcio.conf${format_no_code} file"
+    file="/etc/mkinitpcio.conf"
+    [ "$test_script" = true ] && file="/dev/null"
+    print_cmd "vim /etc/mkinitpcio.conf" success
     if [ "$success" = true ] ; then
-      print_pos "Finished editing locale.gen"
+      print_pos "Finished editing ${format_code}mkinitpcio.conf${format_no_code}"
     else
-      print_fail "Failed editing locale.gen"
+      print_fail "Failed editing ${format_code}mkinitpcio.conf${format_no_code}"
+    fi
+    print_prompt_boolean "Do you want to rebuild the initramfs?" "y" rebuildinitramfs
+    if [ "$rebuildinitramfs" = true ] ; then
+      print_status "Rebuilding initramfs"
+      print_cmd "mkinitcpio -p linux" success
+      if [ "$success" = true ] ; then
+        print_pos "Finished rebuilding initramfs"
+      else
+        print_fail "Failed rebuilding initramfs"
+      fi
+    else
+      print_status "Skipping the rebuilding of initramfs"
     fi
   else
-    file="/etc/locale.gen"
-    [ "$test" = true ] && file="/dev/null"
-    for new_locale in "${locales[@]}"; do
-      echo "$new_locale" >> $file
-    done
-    print_pos "Written the locales to ${format_code}/etc/locale.gen${format_no_code}"
-  fi
-  print_status "Generating localizations"
-  print_cmd "locale-gen" success
-  if [ "$success" = true ] ; then
-    print_pos "Finished generating localizations"
-  else
-    print_fail "Failed generating localizations"
-  fi
-  print_status "Setting ${format_code}LANG${format_no_code}-variable to ${format_variable}$lang"
-  file="/etc/locale.conf"
-  [ "$test" = true ] && file="/dev/null"
-  print_cmd_invisible "echo 'LANG=$lang' > $file" success
-  if [ "$success" = true ] ; then
-    print_pos "Finished setting ${format_code}LANG${format_no_code}${format_positive}-variable"
-  else
-    print_fail "Failed setting ${format_code}LANG${format_no_code}${format_negative}-variable"
-  fi
-  print_status "Setting keyboard layout for the new system"
-  if [ "$keyboard_layout" = "" ] ; then
-    print_prompt "Please set the desired keyboard layout:" "> "
-    keyboard_layout=$answer
-  fi
-  file="/etc/vconsole.conf"
-  [ "$test" = true ] && file="/dev/null"
-  print_cmd_invisible "echo 'KEYMAP=$keyboard_layout' > $file" success
-  if [ "$success" = true ] ; then
-    print_pos "Finished setting keyboard layout for the new system"
-  else
-    print_fail "Failed setting keyboard layout for the new system"
+    print_status "Skipping the ${format_code}mkinitpcio.conf${format_no_code} file"
   fi
   print_end
-}
-declare -a locales=()
-
-# 13
-hostname() {
-    print_section "Hostname"
-    if [ $hostname = "" ] ; then
-        print_prompt "Set the desired hostname for the new system" "> "
-        hostname=$answer
-    fi
-    file="/etc/hostname"
-    [ "$test" = true ] && file="/dev/null"
-    print_cmd_invisible "echo '$hostname' > $file" success
-    if [ "$success" = true ] ; then
-        print_pos "Finished setting the hostname"
-    else
-        print_fail "Failed setting the hostname"
-    fi
-    print_status "Setting up hosts file"
-    file="/etc/hosts"
-    if [ "$hosts_redirects" != "" ] ; then
-        [ "$test" = true ] && file="/dev/null"
-        for redirect in "${hosts_redirects[@]}"; do
-            echo "$redirect" >> $file
-        done
-        [ "$success" = true ] && print_pos "Finished setting up hosts file"
-    fi
-    print_end
-}
-
-# 14
-network_configuration() {
-    print_section "Network Configuration"
-    [ "$prompt_to_manage_manually" = "" ] && prompt_to_manage_manually=true
-    if [ "$prompt_to_manage_manually" = true ] ; then
-        print_status "Listing network interfaces..."
-        print_cmd "ip link" success
-        [ "$success" = false ] && print_fail "Failed listing network interfaces"
-        print_status "Please setup the network configuration by yourself"
-        sub_shell
-    fi
-    if [ "$platform" = "laptop" ] ; then
-        [[ $wireless_support == "" ]] && print_prompt_boolean "Should packages for wireless support be installed?" "n" wireless_support
-        if [ "$wireless_support" = true ] ; then
-            print_cmd "pacman -S --color=always iw wpa_supplicant" success
-            if [ "$success" = true ] ; then
-                print_pos "Finished installing wireless support packages"
-            else
-                print_fail "Failed installing wireless support packages"
-            fi
-            [ "$dialog" = "" ] && print_prompt_boolean "Should the optional package ${format_code}dialog${format_no_code} for ${format_code}wifi-menu${format_no_code} be installed?" "n" dialog
-            if [ "$dialog" = true ] ; then
-                print_cmd "pacman -S --color=always dialog" success
-                if [ "$success" = true ] ; then
-                    print_pos "Finished installing ${format_code}dialog${format_no_code}"
-                else
-                    print_fail "Failed installing ${format_code}dialog${format_no_code}"
-                fi
-            fi
-            print_status "Please install needed ${format_code}firmware packages${format_no_code}:"
-            print_status "${font_link}https://wiki.archlinux.org/index.php/Wireless_network_configuration#Installing_driver.2Ffirmware${font_no_link}"
-            sub_shell
-        fi
-    fi
-    print_end
-}
-
-# 15
-initramfs() {
-    print_section "Initramfs"
-    [ "$modify_initramfs" = "" ] && print_prompt_boolean "Do you want to edit the ${format_code}mkinitpcio.conf${format_no_code} file?" "y" modify_initramfs
-    if [ "$modify_initramfs" = true ] ; then
-        print_status "Editing the ${format_code}mkinitpcio.conf${format_no_code} file"
-        file="/etc/mkinitpcio.conf"
-        [ "$test" = true ] && file="/dev/null"
-        print_cmd "vim /etc/mkinitpcio.conf" success
-        if [ "$success" = true ] ; then
-            print_pos "Finished editing ${format_code}mkinitpcio.conf${format_no_code}"
-        else
-            print_fail "Failed editing ${format_code}mkinitpcio.conf${format_no_code}"
-        fi
-        print_prompt_boolean "Do you want to rebuild the initramfs?" "y" rebuildinitramfs
-        if [ "$rebuildinitramfs" = true ] ; then
-            print_status "Rebuilding initramfs"
-            print_cmd "mkinitcpio -p linux" success
-            if [ "$success" = true ] ; then
-                print_pos "Finished rebuilding initramfs"
-            else
-                print_fail "Failed rebuilding initramfs"
-            fi
-        else
-            print_status "Skipping the rebuilding of initramfs"
-        fi
-    else
-        print_status "Skipping the ${format_code}mkinitpcio.conf${format_no_code} file"
-    fi
-    print_end
 }
 
 # 16
@@ -1062,7 +1027,7 @@ function newline() {
 declare -a levels=()
 function print_title() {
   local title="$1"
-  [[ -z "$run_through" ]] && tput cud 2
+  [[ -z "$run_through" ]] && newline
   newline
   local IFS='.'
   printf '%s' "${FG_WHITE}${UNDERLINE}${BOLD}$1${RESET}"
@@ -1119,7 +1084,7 @@ function exec_cmd() {
   debug "Executing: $*"
   tput hpa $left
   echo " ${BOLD}${FG_RED}\$ ${RESET}${BOLD}$*${RESET}"
-  $* 2>&1 | {
+  eval "$*" 2>&1 | {
     local -i l=1
     while read line; do
       printf "${BG_LGRAY}${FG_BLACK}%4d:${RESET}" $l
@@ -1133,7 +1098,10 @@ function exec_cmd() {
   return $retval
 }
 function prepare_pane() {
-  [[ -n "$run_through" ]] && left=$(((${#FUNCNAME[@]}-3)*2))
+  if [[ -n "$run_through" ]]; then
+    left=$(((${#FUNCNAME[@]}-3)*2))
+    [[ -n "$test_script" ]] && ((left--))
+  fi
   [[ -z "$run_through" ]] && tput clear
 }
 

@@ -638,7 +638,15 @@ packer() { return; }
 yaourt() { return; }
 git() { return; }
 chown() { return; }
+sed() {
+  if [[ "$1" == "-i" ]]; then
+    return
+  else
+    command sed $*
+  fi
+}
+arch-chroot() { bash --init-file; }
 
-test=true
+test_script=true
 
 source arch.sh $*

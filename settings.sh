@@ -144,7 +144,7 @@ city="Zurich"
 #### 3.4 Locale
 LANG="de_CH.UTF-8"
 locales=( # default: "en_US.UTF-8 UTF-8"
-  "$LANG"
+  "$LANG UTF-8"
   "de_CH ISO-8859-1"
   "ja_JP.EUC-JP EUC-JP"
   "ja_JP.UTF-8 UTF-8"
@@ -155,13 +155,8 @@ locales=( # default: "en_US.UTF-8 UTF-8"
 )
 
 #### 3.5 Hostname
-# default: (asks)
-hostname="turing"
-hosts_redirects=(
-  "127.0.0.1	localhost"
-  "::1		localhost"
-  "127.0.1.1	$hostname.localdomain"
-)
+hostname="kepler22b"
+perm_ip= # In case the system has a permanent ip(default: '127.0.1.1')
 
 #### 3.6 Network configuration
 # default: true
