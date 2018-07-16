@@ -645,7 +645,10 @@ sed() {
     command sed $*
   fi
 }
-arch-chroot() { bash --init-file; }
+arch-chroot() { bash; }
+grub-install() { return; }
+grub-mkconfig() { return; }
+tar() { return; }
 
 test_script=true
 

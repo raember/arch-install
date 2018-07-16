@@ -17,17 +17,14 @@ console_font="Lat2-Terminus16.psfu.gz"
   # greek-polytonic.psfu.gz
   # Lat2-Terminus16.psfu.gz
   # LatGrkCyr-8x16.psfu.gz
-
 #### 1.2 Verify the boot mode
-
 #### 1.3 Connect to the Internet
 ping_address="archlinux.org" # default: "8.8.8.8"
-
 #### 1.4 Update the system clock
-
 #### 1.5 Partition the disks
 disk="/dev/sda" # For convenience - irrelevant for script
 function partition_disks() {
+  #bash # For manual setup
   parted -s $disk \
     mklabel gpt \
     mkpart primary fat32 1MB 578MB \
@@ -35,17 +32,17 @@ function partition_disks() {
     mkpart primary ext4 11.3GB 500GB
   # Set up LVM/LUKS/RAID?
 }
-
 #### 1.6 Format the partitions
 function format_partitions() {
+  #bash # For manual setup
   mkfs.fat -F32 ${disk}1
   mkswap ${disk}2
   swapon ${disk}2
   mkfs.ext4 ${disk}3
 }
-
 #### 1.7 Mount the file systems
 function mount_partitions() {
+  #bash # For manual setup
   mount ${disk}3 /mnt
   mkdir -p /mnt/boot
   mount ${disk}1 /mnt/boot
@@ -119,28 +116,22 @@ reflector_args=(
   "-c UnitedKingdom"        # 9 servers
   # "-c UnitedStates"         # 83 servers
   # "-c Vietnam"              # 1 server
-
   "-p https" # Protocol (http/https)
   "-f 50" # The n fastest
   "-l 50" # The n most recently updated
   "--sort delay" # Sort by {age,rate,country,score,delay}
 )
-
 #### 2.2 Install the base packages
-
 
 ################################################################################
 # 3 Configure the system
 #
 #### 3.1 Fstab
 fstab_identifier='U' # fstab file uses UUID('U') or labels('L')(default: 'U')
-
 #### 3.2 Chroot
-
 #### 3.3 Time zone
 region="Europe"
 city="Zurich"
-
 #### 3.4 Locale
 LANG="de_CH.UTF-8"
 locales=( # default: "en_US.UTF-8 UTF-8"
@@ -153,39 +144,72 @@ locales=( # default: "en_US.UTF-8 UTF-8"
   "en_US.UTF-8 UTF-8"
   "en_US ISO-8859-1"
 )
-
-#### 3.5 Hostname
+#### 3.5 Network configuration
 hostname="kepler22b"
 perm_ip= # In case the system has a permanent ip(default: '127.0.1.1')
-
-#### 3.6 Network configuration
-# default: true
-prompt_to_manage_manually=true
-
-# Install wireless support packages(only applicable when on a laptop)
-# default: (asks)
-wireless_support=true
-
-# Install the application dialog to handle wireless connections
-# default: (asks)
-dialog=true
-
 #### 3.7 Initramfs
-# default: (asks)
-modify_initramfs=false
-
+edit_mkinitcpio=1 # For editing the mkinitcpio.conf(default: '')
 #### 3.8 Root password
-
 #### 3.9 Boot loader
-
+function install_bootloader() {
+  #bash # For manual setup
+  pacman -S grub
+  grub-install --target=i386-pc $disk
+  grub-mkconfig -o /boot/grub/grub.cfg
+}
+function configure_microcode() {
+  #bash # For manual setup
+  grub-mkconfig -o /boot/grub/grub.cfg
+}
 
 ################################################################################
 # 4 Reboot
 
-
 ################################################################################
 # 5 Post-Installation
 #
+############################################################
+# 5.1 General Recommendations
+#
+########################################
+# 5.1.1 System Administration
+#### 5.1.1.1 Users and Groups
+add_users_and_groups() {
+  local usr="raphael"
+  useradd -mG wheel,users,sys,rfkill,log,http,games,ftp -s /bin/zsh -c "Raphael Emberger" $usr
+  passwd $usr
+}
+#### 5.1.1.2 Privilege Escalation
+handle_privilage_escalation() { # Allow users of group "wheel" to use su/sudo
+  sed -i 's/^# \(%wheel ALL=(ALL) ALL\)$/\1/g' /etc/sudoers
+}
+#### 5.1.1.3 Service Management
+#### 5.1.1.4 System Maintenance
+backup_pacman_db=1 # default: ''
+change_pw_policy=1 # default: ''
+setup_pw_policy() {
+  cat << EOF
+#%PAM-1.0
+password required pam_cracklib.so retry=2 minlen=10 difok=6 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1
+password required pam_unix.so use_authtok sha512 shadow
+EOF
+}
+change_lockout_policy=1 # default: ''
+setup_lockout_policy() {
+  cat << EOF
+#%PAM-1.0
+auth required pam_tally2.so deny=3 unlock_time=600 onerr=succeed
+account required pam_tally2.so
+EOF
+}
+faildelay=4000000 # delay after failed login attempt in microseconds(0=no delay)
+
+
+############################################################
+# 5.2 Applications
+#
+
+
 #### Preparation
 # Username for which the preparations are intended for(NOT root)
 username="alan"
@@ -394,6 +418,7 @@ aur_packages=(
   python-pywal # Best eyecandy there is
   arc-gtk-theme # GTK Theme "Arc"
   ibus-mozc-ut2 # Input method manager
+  dotdrop # dotfile manager
 )
 # Script to run after the installation.
 # Used to setup installed packages

@@ -25,6 +25,7 @@ define_opt '_help'       '-h' '--help'         ''     'Display this help text.'
 define_opt '_ver'        '-v' '--version'      ''     'Display the VERSION.'
 define_opt 'logfile'     '-l' '--logfile'      'file' "Change logfile to ${ITALIC}file${RESET}."
 define_opt '_chroot'     '-c' '--chroot'       ''     "Continue script from after ${ITALIC}chroot${RESET}."
+define_opt '_post'       '-p' '--post-install' ''     "Continue script from the ${ITALIC}post-installation${RESET}."
 define_opt 'run_through' '-r' '--run-through'  ''     "Don't let user navigate."
 DESCRIPTION="This script simplifies the installation of Arch Linux. It can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
 As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
@@ -76,7 +77,7 @@ function main() {
     prepare_pane
     declare -i top
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "Arch Linux Installation"
-    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && enumerate_options "Quit" \
+    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && [[ -z "$_post" ]] && enumerate_options "Quit" \
                 "1 Pre-Installation" \
                 "2 Installation" \
                 "3 Configure the system" \
@@ -86,6 +87,7 @@ function main() {
       answer=$number
       [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
       [[ -n "$_chroot" ]] && answer=3
+      [[ -n "$_post" ]] && answer=5
       case "$answer" in
         0)
           return
@@ -104,12 +106,10 @@ function main() {
           ;;
         4)
           push suggestion 5
-          NYI
-          reboot
+          reboot_system
           ;;
         5)
           push suggestion 0
-          NYI
           post_installation
           ;;
         *)
@@ -460,7 +460,7 @@ declare -rA country_dict=([AU]='Australia' [AT]='Austria' [BD]='Bangladesh'
   [UA]='Ukraine' [GB]='United Kingdom' [US]='United States' [VN]='Vietnam'
 )
 # 2.1
-select_the_mirrors() {
+function select_the_mirrors() {
   local -i number=1
   local -r mirrorlist="/etc/pacman.d/mirrorlist"
   while : ; do
@@ -532,7 +532,7 @@ function run_reflector() {
 }
 
 # 2.2
-install_the_base_packages() {
+function install_the_base_packages() {
   prepare_pane
   print_title "2.2 Install the base packages"
   local install_now='y'
@@ -669,9 +669,20 @@ function chroot() {
   exec_cmd cp "./{arch.sh,$(basename $logfile),settings.sh}" "/mnt/root/"
   local oldlogfile="$(basename $logfile)"
   [[ -z "$test_script" ]] && logfile="/mnt/root/$logfile"
-  local cmd="#cd
-./arch.sh -cl $oldlogfile"
-  exec_cmd "arch-chroot /mnt bash --init-file <(echo \"$cmd\")"
+  local bashrc="/mnt/root/.bashrc"
+  local oldbashrc="${bashrc}.bak"
+  if [[ -n "$test_script" ]]; then
+    bashrc="/dev/null"
+    oldbashrc="/dev/null"
+  fi
+  exec_cmd "cp \"$bashrc\" \"$oldbashrc\""
+  exec_cmd "echo \"cd\" >> \"$bashrc\""
+  exec_cmd "echo \"~/arch.sh -cl $oldlogfile\" >> \"$bashrc\""
+  exec_cmd "arch-chroot /mnt"
+  newline
+  info "Exited chroot. Rebooting."
+  pause
+  exec_cmd reboot
 }
 
 # 3.3
@@ -758,7 +769,7 @@ function locale() {
 }
 
 # 3.5
-network_configuration() {
+function network_configuration() {
   prepare_pane
   print_title "3.5 Network Configuration"
   newline
@@ -791,96 +802,369 @@ eof
 }
 
 # 3.6
-initramfs() {
+function initramfs() {
   prepare_pane
   print_title "3.5 Initramfs"
   newline
-
-  
-  [ "$modify_initramfs" = "" ] && print_prompt_boolean "Do you want to edit the ${format_code}mkinitpcio.conf${format_no_code} file?" "y" modify_initramfs
-  if [ "$modify_initramfs" = true ] ; then
-    print_status "Editing the ${format_code}mkinitpcio.conf${format_no_code} file"
-    file="/etc/mkinitpcio.conf"
-    [ "$test_script" = true ] && file="/dev/null"
-    print_cmd "vim /etc/mkinitpcio.conf" success
-    if [ "$success" = true ] ; then
-      print_pos "Finished editing ${format_code}mkinitpcio.conf${format_no_code}"
-    else
-      print_fail "Failed editing ${format_code}mkinitpcio.conf${format_no_code}"
+  if [[ -n "$edit_mkinitcpio" ]]; then
+    info 'Editing /etc/mkinitcpio.conf.'
+    vim "/etc/mkinitcpio.conf"
+    if ! exec_cmd mkinitcpio -p linux; then
+      error "Couldn't rebuild initramfs image."
+      return
     fi
-    print_prompt_boolean "Do you want to rebuild the initramfs?" "y" rebuildinitramfs
-    if [ "$rebuildinitramfs" = true ] ; then
-      print_status "Rebuilding initramfs"
-      print_cmd "mkinitcpio -p linux" success
-      if [ "$success" = true ] ; then
-        print_pos "Finished rebuilding initramfs"
-      else
-        print_fail "Failed rebuilding initramfs"
-      fi
-    else
-      print_status "Skipping the rebuilding of initramfs"
-    fi
+    newline
+    info 'Done.'
   else
-    print_status "Skipping the ${format_code}mkinitpcio.conf${format_no_code} file"
+    info 'Nothing to do.'
   fi
-  print_end
 }
 
-# 16
-root_password() {
-    print_section "Root password"
-    if [ "$username" != "" ] ; then
-        print_status "Adding user $username"
-        groups_list=$(printf ",%s" "${groups[@]}" | cut -c2-)
-        print_cmd_invisible "mkdir -p '$home'" success
-        [ "$success" != true ] && print_fail "Failed"
-        print_cmd_invisible "chown $user:$user '$home' -R" success
-        [ "$success" != true ] && print_fail "Failed"
-        [ "$shell" = "" ] && shell="bash"
-        if [ "$shell" != "bash" ] ; then
-            print_status "Installing $shell"
-            print_cmd "pacman -S --color=always $shell" success
-            [ "$success" = false ] && print_fail "Failed"
-        fi
-        print_cmd_invisible "useradd $username -G $groups_list -d '$home' -s /bin/$shell" success
-        [ "$success" != true ] && print_fail "Failed"
-        print_pos "User $username added"
-    fi
-    print_status "It's time to set the root password and add users and groups."
-    sub_shell
-    print_prompt "Edit the ${format_code}/etc/sudoers${format_no_code} file to allow users in the group ${format_code}wheel${format_no_code} to execute ${format_code}sudo${format_no_code}"
-    print_cmd "visudo" success
-    if [ "$success" = true ] ; then
-        print_pos "Edited the ${format_code}/etc/sudoers${format_no_code} file"
-    else
-        print_fail "Failed to edit the ${format_code}/etc/sudoers${format_no_code} file"
-    fi
-    print_end
+# 3.7
+function root_password() {
+  prepare_pane
+  print_title "3.7 Root password"
+  newline
+  info 'Please set a root password:'
+  if ! passwd; then
+    newline
+    error "Couldn't set the root password."
+    return
+  fi
+  newline
+  info 'Done.'
 }
 
-# 17
-boot_loader() {
-    print_section "Boot loader"
-    print_status "Please choose a boot loader and install it manually according to the Wiki:"
-    print_status "${font_link}https://wiki.archlinux.org/index.php/Category:Boot_loaders${font_no_link}"
-    sub_shell
-    print_status "Checking cpu..."
-    print_cmd_invisible "grep 'Intel' /proc/cpuinfo &> /dev/null" success
-    if [ "$success" = true ] ; then
-        print_status "Intel CPU detected"
-        print_status "Installing ${format_code}intel-ucode${format_no_code}"
-        print_cmd "pacman -S --color=always intel-ucode" success
-        if [ "$success" = true ] ; then
-            print_pos "Installation succeeded"
-        else
-            print_fail "Installation failed"
-        fi
-        print_status "Please enable microcode updates manually according to the Wiki:"
-        print_status "${font_link}https://wiki.archlinux.org/index.php/Microcode#Enabling_Intel_microcode_updates${font_no_link}"
-        sub_shell
-    fi
-    print_end
+# 3.8
+function boot_loader() {
+  prepare_pane
+  print_title "3.8 Boot loader"
+  newline
+  info 'Executing install_bootloader routine:'
+  if ! exec_cmd install_bootloader; then
+    newline
+    error "Couldn't run command successfully."
+    return
+  else
+    newline
+    info 'Done.'
+  fi
+  newline
+  info 'Checking for Intel.'
+  if ! exec_cmd grep \'Intel\' /proc/cpuinfo; then
+    newline
+    info 'No Intel CPU found.'
+    newline
+    info 'Done.'
+    return
+  fi
+  newline
+  info 'Intel CPU detected.'
+  if ! exec_cmd pacman -S intel-ucode --color=always --noconfirm; then
+    newline
+    error "Couldn't install package."
+    return
+  fi
+  newline
+  info 'Executing configure_microcode routine:'
+  if ! exec_cmd configure_microcode; then
+    newline
+    error "Couldn't run command successfully."
+    return
+  else
+    newline
+    info 'Done.'
+  fi
 }
+
+# 4
+function reboot_system() {
+  prepare_pane
+  print_title "4 Reboot"
+  newline
+  info 'Cleaning up files.'
+  local bashrc="/mnt/root/.bashrc"
+  local oldbashrc="${bashrc}.bak"
+  if [[ -n "$test_script" ]]; then
+    bashrc="/dev/null"
+    oldbashrc="/dev/null"
+  fi
+  exec_cmd "cp \"$oldbashrc\" \"$bashrc\""
+  exec_cmd "echo \"~/arch.sh -pl $oldlogfile\" >> \"$bashrc\""
+  newline
+  info 'Please exit the chroot now(Ctrl+D).'
+  exit 0
+}
+
+################################################################################
+# 5
+function post_installation() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5 Post-Installation"
+    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
+                "5.1 General Recommendations" \
+                "5.2 Applications"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          general_recommendations
+          ;;
+        2)
+          push suggestion 0
+          applications
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1
+function general_recommendations() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1 General Recommendations"
+    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+                "5.1.1  System Administration" \
+                "5.1.2  Package management" \
+                "5.1.3  Booting" \
+                "5.1.4  Graphical User Interface" \
+                "5.1.5  Power Management" \
+                "5.1.6  Multimedia" \
+                "5.1.7  Networking" \
+                "5.1.8  Input Devices" \
+                "5.1.9  Optimization" \
+                "5.1.10 System Service" \
+                "5.1.11 Console Improvements"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          NYI
+          system_administration
+          ;;
+        2)
+          push suggestion 3
+          NYI
+          package_management
+          ;;
+        3)
+          push suggestion 4
+          NYI
+          booting
+          ;;
+        4)
+          push suggestion 5
+          NYI
+          gui
+          ;;
+        5)
+          push suggestion 6
+          NYI
+          power_management
+          ;;
+        6)
+          push suggestion 7
+          NYI
+          multimedia
+          ;;
+        7)
+          push suggestion 8
+          NYI
+          networking
+          ;;
+        8)
+          push suggestion 9
+          NYI
+          input_devices
+          ;;
+        9)
+          push suggestion 10
+          NYI
+          optimization
+          ;;
+        10)
+          push suggestion 11
+          NYI
+          system_service
+          ;;
+        11)
+          push suggestion 0
+          NYI
+          console_improvements
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1.1
+function system_administration() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.1 System Administration"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+                "5.1.1.1 Users and Groups" \
+                "5.1.1.2 Privilege Escalation" \
+                "5.1.1.3 Service Management" \
+                "5.1.1.4 System Maintenance"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          users_and_groups
+          ;;
+        2)
+          push suggestion 3
+          privilege_escalation
+          ;;
+        3)
+          push suggestion 4
+          NYI
+          service_management
+          ;;
+        4)
+          push suggestion 0
+          NYI
+          system_maintenance
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1.1.1
+function users_and_groups() {
+  prepare_pane
+  print_title "5.1.1.1 Users and Groups"
+  newline
+  info "Executing the add_users_and_groups routine:"
+  if ! exec_cmd add_users_and_groups; then
+    newline
+    error "Couldn't run command."
+  else
+    newline
+    info 'Done.'
+  fi
+}
+
+# 5.1.1.2
+function privilege_escalation() {
+  prepare_pane
+  print_title "5.1.1.2 Privilege Escalation"
+  newline
+  info 'Executing the handle_privilage_escalation routine:'
+  if ! exec_cmd handle_privilage_escalation; then
+    newline
+    error "Couldn't run command."
+  else
+    newline
+    info 'Done.'
+  fi
+}
+
+# 5.1.1.3
+function service_management() {
+  prepare_pane
+  print_title "5.1.1.3 Service Management"
+  newline
+  info 'Nothing to do here.'
+}
+
+# 5.1.1.4
+function system_maintenance() {
+  prepare_pane
+  print_title "5.1.1.4 System Maintenance"
+  newline
+  info 'Checking if any services failed.'
+  exec_cmd systemctl --failed
+  info 'Checking logs.'
+  exec_cmd journalctl -p 3 -xb
+  newline
+  if [[ -n "$backup_pacman_db" ]]; then
+    info 'Backing up pacman database.'
+    exec_cmd tar -cjf /var/lib/pacman/local.bak.tar.bz2 /var/lib/pacman/local
+    newline
+  fi
+  if [[ -n "$change_pw_policy" ]]; then
+    info 'Setting password policy.'
+    local file="/etc/pam.d/passwd"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    exec_cmd "setup_pw_policy > $file"
+    newline
+  fi
+  if [[ -n "$change_lockout_policy" ]]; then
+    info 'Setting lock out policy.'
+    local file="/etc/pam.d/system-login"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    exec_cmd "setup_lockout_policy > $file"
+    newline
+  fi
+  if ((faildelay >= 0)); then
+    info 'Writing fail delay to /etc/pam.d/system-login.'
+    local file="/etc/pam.d/system-login"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" > $file"
+    newline
+  fi
+  local file="/etc/pam.d/system-login"
+  [[ -n "$test_script" ]] && file="/dev/null"
+  info 'Commenting out deprecated line.'
+  exec_cmd sed -i 's/^auth\ *required\ *pam_tally.so.*$/#\0/g' "$file"
+  newline
+  info 'Done.'
+}
+
+
 
 
 # 18
@@ -984,7 +1268,7 @@ install_packages() {
 }
 
 # 22
-post_installation() {
+post_installation_old() {
     print_section "Post-Installation"
     print_cmd_invisible "cd $home" success
     [ "$success" = false ] && print_fail "Failed"
