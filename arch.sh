@@ -963,22 +963,18 @@ function general_recommendations() {
           ;;
         1)
           push suggestion 2
-          NYI
           system_administration
           ;;
         2)
           push suggestion 3
-          NYI
           package_management
           ;;
         3)
           push suggestion 4
-          NYI
           booting
           ;;
         4)
           push suggestion 5
-          NYI
           gui
           ;;
         5)
@@ -1059,12 +1055,10 @@ function system_administration() {
           ;;
         3)
           push suggestion 4
-          NYI
           service_management
           ;;
         4)
           push suggestion 0
-          NYI
           system_maintenance
           ;;
         *)
@@ -1126,43 +1120,701 @@ function system_maintenance() {
   print_title "5.1.1.4 System Maintenance"
   newline
   info 'Checking if any services failed.'
-  exec_cmd systemctl --failed
+  if ! exec_cmd systemctl --failed; then
+    newline
+    warn 'Failure'
+  fi
+  newline
   info 'Checking logs.'
-  exec_cmd journalctl -p 3 -xb
+  if ! exec_cmd journalctl -p 3 -xb; then
+    newline
+    warn 'Failure'
+  fi
   newline
   if [[ -n "$backup_pacman_db" ]]; then
     info 'Backing up pacman database.'
-    exec_cmd tar -cjf /var/lib/pacman/local.bak.tar.bz2 /var/lib/pacman/local
+    if ! exec_cmd tar -cjf local.bak.tar.bz2 /var/lib/pacman/local; then
+      newline
+      warn 'Failure'
+    else
+      if ! exec_cmd mv local.bak.tar.bz2 /var/lib/pacman/local.bak.tar.bz2; then
+        newline
+        warn 'Failure'
+      fi
+    fi
     newline
   fi
   if [[ -n "$change_pw_policy" ]]; then
     info 'Setting password policy.'
     local file="/etc/pam.d/passwd"
     [[ -n "$test_script" ]] && file="/dev/null"
-    exec_cmd "setup_pw_policy > $file"
+    exec_cmd setup_pw_policy
+    if ! exec_cmd "setup_pw_policy > $file"; then
+      newline
+      warn 'Failure'
+    fi
     newline
   fi
   if [[ -n "$change_lockout_policy" ]]; then
     info 'Setting lock out policy.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
-    exec_cmd "setup_lockout_policy > $file"
+    exec_cmd setup_lockout_policy
+    if ! exec_cmd "setup_lockout_policy > $file"; then
+      newline
+      warn 'Failure'
+    fi
     newline
   fi
   if ((faildelay >= 0)); then
     info 'Writing fail delay to /etc/pam.d/system-login.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
-    exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" > $file"
+    if ! exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" > $file"; then
+      newline
+      warn 'Failure'
+    fi
     newline
   fi
   local file="/etc/pam.d/system-login"
   [[ -n "$test_script" ]] && file="/dev/null"
   info 'Commenting out deprecated line.'
-  exec_cmd sed -i 's/^auth\ *required\ *pam_tally.so.*$/#\0/g' "$file"
+  if ! exec_cmd sed -i 's/^auth\ *required\ *pam_tally.so.*$/#\0/g' "$file"; then
+    newline
+    warn 'Failure'
+  fi
+  if [[ -n "$install_hardened_linux" ]]; then
+    info 'Installing hardened linux kernel.'
+    if ! exec_cmd pacman -S linux-hardened --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  else
+    newline
+    if [[ -n "$restrict_k_log_acc" ]]; then
+      info 'Restricting kernel log access to root.'
+      local file="/etc/sysctl.d/50-dmesg-restrict.conf"
+      [[ -n "$test_script" ]] && file="/dev/null"
+      if ! exec_cmd "echo \"kernel.dmesg_restrict = 1\" >> $file"; then
+        newline
+        warn 'Failure'
+      fi
+      newline
+    fi
+    if [[ -n "$restrict_k_ptr_acc" ]]; then
+      info 'Restricting kernel pointer access.'
+      local file="/etc/sysctl.d/50-kptr-restrict.conf"
+      [[ -n "$test_script" ]] && file="/dev/null"
+      if ! exec_cmd "echo \"kernel.kptr_restrict = $restrict_k_ptr_acc\" >> $file"; then
+        newline
+        warn 'Failure'
+      fi
+      newline
+    fi
+  fi
+  if [[ -n "$bpf_jit_enable" ]]; then
+    info 'Disabling the BPF JIT compiler.'
+    local file="/proc/sys/net/core/bpf_jit_enable"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo $bpf_jit_enable > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$sandbox_app" ]]; then
+    info "Installing sandbox application $sandbox_app."
+    #echo "$sandbox_app" | sed 's/,/ /g' | sed 's/lxc/lxc arch-install-scripts/g'
+    sandbox_app=${sandbox_app/,/ }
+    sandbox_app=${sandbox_app/lxc/lxc arch-install-scripts}
+    [[ $sandbox_app =~ .*virtualbox.* ]] && \
+      warn 'Please install the virtualbox host modules appropriate for your kernel.'
+    if ! exec_cmd pacman -S $sandbox_app --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  info 'Kernel hardening.'
+  newline
+  if [[ -n "$tcp_max_syn_backlog" ]]; then
+    info "Setting TCP SYN max backlog to $tcp_max_syn_backlog."
+    local file="/proc/sys/net/ipv4/tcp_max_syn_backlog"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo $tcp_max_syn_backlog > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$tcp_syn_cookie_prot" ]]; then
+    info 'Enabling TCP SYN cookie protection.'
+    local file="/proc/sys/net/ipv4/tcp_syncookies"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$tcp_rfc1337" ]]; then
+    info 'Enabling TCP rfc1337.'
+    local file="/proc/sys/net/ipv4/tcp_rfc1337"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$log_martians" ]]; then
+    info 'Enabling martian packet logging.'
+    local file="/proc/sys/net/ipv4/conf/default/log_martians"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    file="/proc/sys/net/ipv4/conf/all/log_martians"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$icmp_echo_ignore_broadcasts" ]]; then
+    info 'Ignore echo broadcast requests.'
+    local file="/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$icmp_ignore_bogus_error_responses" ]]; then
+    info 'Ignore bogus error responses.'
+    local file="/proc/sys/net/ipv4/icmp_ignore_bogus_error_responses"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 1 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$send_redirects" ]]; then
+    info 'Disable sending redirects.'
+    local file="/proc/sys/net/ipv4/conf/default/send_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    file="/proc/sys/net/ipv4/conf/all/send_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$accept_redirects" ]]; then
+    info 'Disable accepting redirects.'
+    local file="/proc/sys/net/ipv4/conf/default/accept_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    file="/proc/sys/net/ipv4/conf/all/accept_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    file="/proc/sys/net/ipv6/conf/default/accept_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    file="/proc/sys/net/ipv6/conf/all/accept_redirects"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd "echo 0 > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  info 'SSH hardening.'
+  newline
+  if [[ -n "$ssh_require_key" ]] || \
+    [[ -n "$ssh_deny_root_login" ]] || \
+    [[ -n "$ssh_client" ]]; then
+    info 'Installing OpenSSH.'
+    if ! exec_cmd pacman -S $ssh_client --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    else
+      newline
+      if [[ -n "$ssh_require_key" ]]; then
+        info 'Setting SSH keys as requirement.'
+        local file="/etc/ssh/sshd_config"
+        [[ -n "$test_script" ]] && file="/dev/null"
+        if ! exec_cmd sed -i 's/^# *\(PasswordAuthentication\).*$/\1 no/g' "$file"; then
+          newline
+          warn 'Failure'
+        fi
+        newline
+      fi
+      if [[ -n "$ssh_deny_root_login" ]]; then
+        info 'Disabling root login.'
+        local file="/etc/ssh/sshd_config"
+        [[ -n "$test_script" ]] && file="/dev/null"
+        if ! exec_cmd sed -i 's/^# *\(PermitRootLogin\).*$/\1 no/g' "$file"; then
+          newline
+          warn 'Failure'
+        fi
+        newline
+      fi
+    fi
+  fi
+  info 'DNS hardening.'
+  newline
+  if [[ -n "$install_dnssec" ]]; then
+    info 'Installing dnssec.'
+    if ! exec_cmd pacman -S ldns --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  if [[ -n "$install_dnscrypt" ]]; then
+    info 'Installing dnscrypt.'
+    if ! exec_cmd pacman -S dnscrypt-proxy --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  info 'Proxy hardening.'
+  newline
+  if [[ -n "$install_dnsmasq" ]]; then
+    info 'Installing dnsmasq.'
+    if ! exec_cmd pacman -S dnsmasq --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    else
+      newline
+      info 'Enabling service.'
+      if ! exec_cmd systemctl enable dnsmasq.service; then
+        newline
+        warn 'Failure'
+      fi
+    fi
+    newline
+  fi
+  info 'Done.'
+}
+
+# 5.1.2
+function package_management() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.2 Package Management"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+                "5.1.2.1 Pacman" \
+                "5.1.2.2 Repositories" \
+                "5.1.2.3 Mirrors" \
+                "5.1.2.4 Arch Build System" \
+                "5.1.2.5 Arch User Repository"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          pacman_menu
+          ;;
+        2)
+          push suggestion 3
+          repositories
+          ;;
+        3)
+          push suggestion 4
+          mirrors
+          ;;
+        4)
+          push suggestion 5
+          arch_build_system
+          ;;
+        5)
+          push suggestion 0
+          arch_user_repository
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1.2.1
+function pacman_menu() {
+  prepare_pane
+  print_title "5.1.2.1 Pacman"
+  newline
+  info 'Nothing to do.'
+}
+
+# 5.1.2.2
+function repositories() {
+  prepare_pane
+  print_title "5.1.2.2 Repositories"
+  newline
+  if [[ -n "$enable_multilib" ]]; then
+    info 'Installing dnscrypt.'
+    local file="/etc/pacman.conf"
+    [[ -n "$test_script" ]] && file="/dev/null"
+    if ! exec_cmd sed -iz 's/#\(\[multilib\]\)\n#\(Include.*mirrorlist\)/\1\n\2/g' "$file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  info 'Running setup_unoff_usr_repo routine:'
+  if ! exec_cmd setup_unoff_usr_repo; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  newline
+  if [[ -n "$install_pkgstats" ]]; then
+    info 'Installing pkgstats.'
+    if ! exec_cmd pacman -S pkgstats --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+  fi
+  info 'Done.'
+}
+
+# 5.1.2.3
+function mirrors() {
+  prepare_pane
+  print_title "5.1.2.3 Mirrors"
+  newline
+  info 'Nothing to do.'
+}
+
+# 5.1.2.4
+function arch_build_system() {
+  prepare_pane
+  print_title "5.1.2.4 Arch Build System"
+  newline
+  info 'Nothing to do.'
+}
+
+# 5.1.2.5
+function arch_user_repository() {
+  prepare_pane
+  print_title "5.1.2.5 Arch User Repository"
+  newline
+  if [[ -n "$aur_helper" ]]; then
+    info 'Running install_aur_helper routine:'
+    install_aur_helper
+    if ! check_retval $? ; then
+      newline
+      error 'Failed.'
+      return
+    fi
+  else
+    info 'No AUR helper specified. Please install AUR packages manually.'
+  fi
   newline
   info 'Done.'
 }
+
+# 5.1.3
+function booting() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.3 Booting"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+                "5.1.3.1 Hardware auto-recognition" \
+                "5.1.3.2 Microcode" \
+                "5.1.3.3 Retaining boot messages" \
+                "5.1.3.4 Num Lock activation"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          hardware_auto_recognition
+          ;;
+        2)
+          push suggestion 3
+          microcode
+          ;;
+        3)
+          push suggestion 4
+          retaining_boot_messages
+          ;;
+        4)
+          push suggestion 0
+          num_lock_activation
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1.3.1
+function hardware_auto_recognition() {
+  prepare_pane
+  print_title "5.1.3.1 Hardware auto-recognition"
+  newline
+  info 'Running setup_hardware_auto_recognition routine:'
+  setup_hardware_auto_recognition
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  info 'Done.'
+}
+
+# 5.1.3.2
+function microcode() {
+  prepare_pane
+  print_title "5.1.3.2 Microcode"
+  newline
+  info 'Nothing to do. Done already.'
+}
+
+# 5.1.3.3
+function retaining_boot_messages() {
+  prepare_pane
+  print_title "5.1.3.3 Retaining boot messages"
+  newline
+  if [[ -n "$retain_boot_msgs" ]]; then
+    info 'Creating service unit edit.'
+    local file="/etc/systemd/system/getty@tty1.service.d/noclear.conf"
+    if [[ -n "$test_script" ]]; then
+      file="/dev/null"
+    else
+      exec_cmd mkdir -p "$(dirname $file)"
+    fi
+    if ! exec_cmd "echo \"[Service]
+TTYVTDisallocate=no\" > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+    info 'Done.'
+  else
+    info 'Nothing to do.'
+  fi
+}
+
+# 5.1.3.4
+function num_lock_activation() {
+  prepare_pane
+  print_title "5.1.3.4 Num Lock activation"
+  newline
+  if [[ -n "$activate_numlock_on_boot" ]]; then
+    info 'Extending getty service.'
+    local file="/etc/systemd/system/getty@tty1.service.d/activate-numlock.conf"
+    if [[ -n "$test_script" ]]; then
+      file="/dev/null"
+    else
+      exec_cmd mkdir -p "$(dirname $file)"
+    fi
+    if ! exec_cmd "echo \"[Service]
+ExecStartPre=/bin/sh -c 'setleds -D +num < /dev/%I'\" > $file"; then
+      newline
+      warn 'Failure'
+    fi
+    newline
+    info 'Done.'
+  else
+    info 'Nothing to do.'
+  fi
+}
+
+# 5.1.4
+function gui() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.4 Graphical User Interface"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+                "5.1.4.1 Display server" \
+                "5.1.4.2 Display drivers" \
+                "5.1.4.3 Desktop environments" \
+                "5.1.4.4 Window managers" \
+                "5.1.4.5 Display manager"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          display_server
+          ;;
+        2)
+          push suggestion 3
+          display_drivers
+          ;;
+        3)
+          push suggestion 4
+          desktop_environments
+          ;;
+        4)
+          push suggestion 5
+          window_managers
+          ;;
+        5)
+          push suggestion 0
+          display_manager
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+  done
+}
+
+# 5.1.4.1
+function display_server() {
+  prepare_pane
+  print_title "5.1.4.1 Display server"
+  newline
+  case "$disp_server" in
+    xorg)
+      info 'Installing Xorg:'
+      if ! exec_cmd pacman -S xorg --color=always --noconfirm; then
+        newline
+        warn 'Failure'
+      fi
+      ;;
+    wayland)
+      info 'Installing Wayland:'
+      if ! exec_cmd pacman -S weston --color=always --noconfirm; then
+        newline
+        warn 'Failure'
+      fi
+      ;;
+      *)
+      info "No instruction found for $disp_server."
+  esac
+  newline
+  info 'Done.'
+}
+
+# 5.1.4.2
+function display_drivers() {
+  prepare_pane
+  print_title "5.1.4.2 Display drivers"
+  newline
+  info 'Running install_display_drivers routine:'
+  install_display_drivers
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  info 'Done.'
+}
+
+# 5.1.4.3
+function desktop_environments() {
+  prepare_pane
+  print_title "5.1.4.3 Desktop environments"
+  newline
+  info 'Running install_de routine:'
+  install_de
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  info 'Done.'
+}
+
+# 5.1.4.4
+function window_managers() {
+  prepare_pane
+  print_title "5.1.4.4 Window managers"
+  newline
+  info 'Running install_wm routine:'
+  install_wm
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  info 'Done.'
+}
+
+# 5.1.4.5
+function display_manager() {
+  prepare_pane
+  print_title "5.1.4.5 Display manager"
+  newline
+  info 'Running install_dm routine:'
+  install_dm
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  info 'Done.'
+}
+
+
+
 
 
 
@@ -1213,37 +1865,6 @@ prepare() {
     print_end
 }
 
-# 19
-aur_helper() {
-    print_section "AUR-Helper"
-    print_cmd_invisible "cd $git_dir" success
-    print_status "Installing ${format_code}$aur_helper${format_no_code}"
-    for package in "${aur_helper_packages[@]}"; do
-        print_status "Cloning ${format_code}${package}${format_no_code}"
-        print_cmd "git clone https://aur.archlinux.org/${package}.git" success
-        [ "$success" = false ] && print_fail "Failed"
-        print_cmd_invisible "cd $package" success
-        print_status "Building ${format_code}${package}${format_no_code}"
-        print_cmd "makepkg -fsri" success
-        [ "$success" = false ] && print_fail "Failed"
-        print_cmd_invisible "cd .." success
-    done
-    print_cmd_invisible "cd $home" success
-    print_end
-}
-
-# 20
-num_lock_activation() {
-    print_section "Num Lock activation"
-    [ "$numlock" = "" ] && print_prompt_boolean "Do you want to have NumLock activated on boot?" "y" numlock
-    if [ "$numlock" = true ] ; then
-        package="systemd-numlockontty"
-        print_status "Adding package ${format_code}$package${format_no_code}"
-        print_cmd "$aur_helper --color=always -S systemd-numlockontty" success
-        [ "$success" = false ] && print_neg "Failed"
-    fi
-    print_end
-}
 
 # 21
 install_packages() {

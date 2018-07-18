@@ -203,6 +203,85 @@ account required pam_tally2.so
 EOF
 }
 faildelay=4000000 # delay after failed login attempt in microseconds(0=no delay)
+install_hardened_linux= # default: ''
+restrict_k_log_acc=1 # Restrict kernel log access to root(set by linux-hardened, default: '')
+restrict_k_ptr_acc=2 # {1,2} Restrict kernel pointer access(set by linux-hardened, default: '')
+bpf_jit_enable=0 # En-/disable BPF JIT compiler(default: 1)
+# Install sandbox application(default: '')
+sandbox_app="firejail,lxc" # {firejail,bubblewrap,lxc,virtualbox}
+setup_firewall() {
+  pacman -S ufw
+  systemctl enable ufw.service
+}
+tcp_max_syn_backlog= # Change max syn backlog(default: '' => 256)
+tcp_syn_cookie_prot=1 # Helps protect against SYN flood attacks(default: '')
+tcp_rfc1337=1 # Protect against tcp time-wait assassination hazards(default: '')
+log_martians=1 # Log martian packets(default: '')
+icmp_echo_ignore_broadcasts=1 # Prevent being part of smurf attacks(default: '')
+icmp_ignore_bogus_error_responses=1 # default: ''
+send_redirects=0 # default: '' => 1
+accept_redirects=0 # default: '' => 1
+ssh_client="openssh" # {openssh,mosh,dropbear,...} Package to install ssh capabilities(default: "openssh")
+ssh_require_key= # Require SSH key(default: '')
+ssh_deny_root_login=1 # default: ''
+install_dnssec= # default: ''
+install_dnscrypt= # default: ''
+install_dnsmasq= # default: ''
+#### 5.1.2.1 Pacman
+#### 5.1.2.2 Repositories
+enable_multilib=1 # default: ''
+setup_unoff_usr_repo() { # Add user repos and keys
+  return;
+}
+install_pkgstats= # default: ''
+#### 5.1.2.3 Mirrors
+#### 5.1.2.4 Arch Build System
+#### 5.1.2.5 Arch User Repository
+aur_helper="pikaur" # default: '' => No automatic AUR package installation
+install_aur_helper() {
+  pacman -S git gvim
+  git clone https://aur.archlinux.org/${aur_helper}.git
+  cd $aur_helper
+  vim PKGBUILD
+  makepkg -fsri
+  local retval=$?
+  cd -
+  return $retval
+}
+#### 5.1.3.1 Hardware auto-recognition
+setup_hardware_auto_recognition() {
+  return
+}
+#### 5.1.3.2 Microcode
+#### 5.1.3.3 Retaining boot messages
+retain_boot_msgs=1 # default: ''
+#### 5.1.3.4 Num Lock activation
+activate_numlock_on_boot=1 # Extends the getty service(default: '')
+#### 5.1.4.1 Display server
+disp_server="xorg" # {xorg,wayland} default: "xorg"
+#### 5.1.4.2 Display drivers
+install_display_drivers() {
+  # Laptop: NVE7/GK107
+  # Desktop: NVCF
+  pacman -S \
+    mesa bumblebee nvidia lib32-nvidia-utils lib32-virtualgl \
+    --color=always --noconfirm
+  systemctl enable bumblebeed.service
+}
+#### 5.1.4.3 Desktop environments
+install_de() {
+  return
+}
+#### 5.1.4.4 Window managers
+install_wm() {
+  pacman -S bspwm sxhkd
+}
+#### 5.1.4.5 Display manager
+install_dm() {
+  pacman -S lightdm lightdm-gtk-greeter
+  systemctl enable lightdm.service
+}
+
 
 
 ############################################################
