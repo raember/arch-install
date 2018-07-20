@@ -6,7 +6,7 @@ source bashme/bashme
 
 # Basic settings
 loglevel=$LL_INFO
-logfilelevel=$LL_DEBUG
+logfilelevel=$LL_TRACE
 log2file=1
 
 # Setup:
@@ -28,7 +28,7 @@ define_opt '_chroot'     '-c' '--chroot'       ''     "Continue script from afte
 define_opt '_post'       '-p' '--post-install' ''     "Continue script from the ${ITALIC}post-installation${RESET}."
 define_opt 'run_through' '-r' '--run-through'  ''     "Don't let user navigate."
 DESCRIPTION="This script simplifies the installation of Arch Linux. It can be run in as a interactive script or purely rely on the settings defined in the settings.sh script.
-As an Arch user myself I wanted an easy and fast way to reinstall Arch Linux.
+As An ArCh UsEr MySeLf I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
 
 # Parse arguments
@@ -78,14 +78,14 @@ function main() {
     declare -i top
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "Arch Linux Installation"
     [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && [[ -z "$_post" ]] && enumerate_options "Quit" \
-                "1 Pre-Installation" \
-                "2 Installation" \
-                "3 Configure the system" \
-                "4 Reboot" \
-                "5 Post-Installation"
+      "1 Pre-Installation" \
+      "2 Installation" \
+      "3 Configure the system" \
+      "4 Reboot" \
+      "5 Post-Installation"
     while : ; do
       answer=$number
-      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
+      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && [[ -z "$_post" ]] && read_answer "Enter option [$number]: " answer $number
       [[ -n "$_chroot" ]] && answer=3
       [[ -n "$_post" ]] && answer=5
       case "$answer" in
@@ -123,6 +123,7 @@ function main() {
       break
     done
     pop suggestion number
+    trace "In Main. Next number: $number."
   done
 }
 
@@ -134,13 +135,13 @@ function pre_installation() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "1 Pre-Installation"
     [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
-                "1.1 Set the keyboard layout" \
-                "1.2 Verify the boot mode" \
-                "1.3 Connect to the Internet" \
-                "1.4 Update the system clock" \
-                "1.5 Partition the disks" \
-                "1.6 Format the partitions" \
-                "1.7 Mount the file systems"
+      "1.1 Set the keyboard layout" \
+      "1.2 Verify the boot mode" \
+      "1.3 Connect to the Internet" \
+      "1.4 Update the system clock" \
+      "1.5 Partition the disks" \
+      "1.6 Format the partitions" \
+      "1.7 Mount the file systems"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -188,6 +189,7 @@ function pre_installation() {
       break
     done
     pop suggestion number
+    trace "In Pre-Installation. Next number: $number."
   done
 }
 
@@ -262,9 +264,6 @@ function connect_to_the_internet() {
   prepare_pane
   print_title "1.3 Connect to the Internet"
   newline
-  make_sure_internet_is_connected
-}
-function make_sure_internet_is_connected() {
   info "Checking internet connectivity."
   [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
   while : ; do
@@ -297,32 +296,6 @@ function update_the_system_clock() {
   if ! exec_cmd timedatectl set-ntp true; then
     newline
     error "Couldn't enable NTP synchronization."
-    # if [[ $region != "" && $city != "" ]] ; then
-    #   tput hpa $left
-    #   info "Setting timezone based on locale settings"
-    #   timedatectl set-timezone $region/$city | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-    #   if check_retval $?; then
-    #     tput hpa $left
-    #     info "Set the timezone successfully"
-    #   else
-    #     tput hpa $left
-    #     info "Couldn't set the timezone"
-    #   fi
-    # fi
-    # tput hpa $left
-    # trace "Waiting for the changes to take effect..."
-    # sleep 1s
-    # tput hpa $left
-    # info "Please check if the time has been set correctly:"
-    # timedatectl status | (printf '    ' && cat) | sed -z 's/\n/\n    /gm'
-    # if check_retval $?; then
-    #   tput hpa $left
-    #   info "If the displayed time is incorrect, please set it up yourself."
-    # else
-    #   tput hpa $left
-    #   fatal "Something went horribly wrong"
-    #   exit $EX_ERR
-    # fi
   fi
 }
 
@@ -363,7 +336,7 @@ function format_the_partitions() {
   [[ -z "$run_through" ]] && read_answer "Should the formatting command be run now? [Y/n]: " format_now y
   newline
   if [[ "$format_now" == "y" ]]; then
-    info "Executing ${BOLD}format_partitions${RESET}:"
+    info "Executing format_partitions:"
     if ! exec_cmd format_partitions; then
       newline
       error 'Something went wrong.'
@@ -384,7 +357,7 @@ function mount_the_file_systems() {
   [[ -z "$run_through" ]] && read_answer "Should the mounting command be run now? [Y/n]: " mount_now y
   newline
   if [[ "$mount_now" == "y" ]]; then
-    info "Executing ${BOLD}mount_partitions${RESET}:"
+    info "Executing mount_partitions:"
     if ! exec_cmd mount_partitions; then
       newline
       error 'Something went wrong.'
@@ -406,8 +379,8 @@ function installation() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "2 Installation"
     [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
-                "2.1 Select the mirrors" \
-                "2.2 Install the base packages"
+      "2.1 Select the mirrors" \
+      "2.2 Install the base packages"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -435,6 +408,7 @@ function installation() {
       break
     done
     pop suggestion number
+    trace "In Installation. Next number: $number."
   done
 }
 
@@ -488,7 +462,7 @@ function select_the_mirrors() {
           ;;
         2)
           push suggestion 0
-          vim "$mirrorlist"
+          NO_PIPE=1 exec_cmd vim "$mirrorlist"
           break
           ;;
         *)
@@ -503,6 +477,7 @@ function select_the_mirrors() {
       break
     done
     pop suggestion number
+    trace "In Select the mirrors. Next number: $number."
   done
 }
 function run_reflector() {
@@ -539,7 +514,7 @@ function install_the_base_packages() {
   [[ -z "$run_through" ]] && read_answer "Should the base package installation be run now? [Y/n]: " install_now y
   newline
   if [[ "$install_now" == "y" ]]; then
-    info "Executing ${BOLD}format_partitions${RESET}:"
+    info "Installing base packages:"
     if ! exec_cmd pacstrap /mnt base --color=always; then
       newline
       error 'Something went wrong.'
@@ -560,14 +535,14 @@ function configure_the_system() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "3 Configure the system"
     [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && enumerate_options "Return to Main" \
-                "3.1 Fstab" \
-                "3.2 Chroot" \
-                "3.3 Time zone" \
-                "3.4 Locale" \
-                "3.5 Network configuration" \
-                "3.6 Initramfs" \
-                "3.7 Root password" \
-                "3.8 Boot loader"
+      "3.1 Fstab" \
+      "3.2 Chroot" \
+      "3.3 Time zone" \
+      "3.4 Locale" \
+      "3.5 Network configuration" \
+      "3.6 Initramfs" \
+      "3.7 Root password" \
+      "3.8 Boot loader"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
@@ -583,7 +558,7 @@ function configure_the_system() {
           ;;
         2)
           push suggestion 3
-          chroot
+          chroot_into_mnt
           ;;
         3)
           push suggestion 4
@@ -621,6 +596,7 @@ function configure_the_system() {
       break
     done
     pop suggestion number
+    trace "In Configure the system. Next number: $number."
   done
 }
 
@@ -653,13 +629,16 @@ function fstab() {
     esac
     break
   done
-  if ! exec_cmd "genfstab -$fstab_identifier /mnt | tee /mnt/etc/fstab"; then
+  local fstab_file="/mnt/etc/fstab"
+  [[ -n "$test_script" ]] && fstab_file="/dev/null"
+  if ! exec_cmd "genfstab -$fstab_identifier /mnt | tee $fstab_file"; then
     error "Couldn't generate fstab-file."
   fi
 }
 
 # 3.2
-function chroot() {
+function chroot_into_mnt() {
+  _chroot=''
   prepare_pane
   print_title "3.2 Chroot"
   newline
@@ -675,9 +654,9 @@ function chroot() {
     bashrc="/dev/null"
     oldbashrc="/dev/null"
   fi
-  exec_cmd "cp \"$bashrc\" \"$oldbashrc\""
-  exec_cmd "echo \"cd\" >> \"$bashrc\""
-  exec_cmd "echo \"~/arch.sh -cl $oldlogfile\" >> \"$bashrc\""
+  exec_cmd "cp $bashrc $oldbashrc"
+  exec_cmd "echo \"cd\" | tee -a $bashrc"
+  exec_cmd "echo \"~/arch.sh -cl $oldlogfile\" | tee -a $bashrc"
   exec_cmd "arch-chroot /mnt"
   newline
   info "Exited chroot. Rebooting."
@@ -729,7 +708,7 @@ function locale() {
   if [ ${#locales[@]} -eq 0 ]; then
     info 'Editing /etc/locale.gen file.'
     pause
-    vim /etc/locale.gen
+    NO_PIPE=1 exec_cmd vim /etc/locale.gen
   else
     info 'Uncommenting locales.'
     local locale
@@ -750,7 +729,7 @@ function locale() {
   info "Setting ${ITALICS}LANG${RESET}-variable."
   local file="/etc/locale.conf"
   [[ -n "$test_script" ]] && file="/dev/null"
-  if ! exec_cmd "echo \"LANG=$LANG\" > $file"; then
+  if ! exec_cmd "echo \"LANG=$LANG\" | tee $file"; then
     newline
     error "Couldn't persist ${ITALICS}LANG${RESET} variable."
     return
@@ -760,7 +739,7 @@ function locale() {
     info "Setting ${ITALICS}KEYMAP${RESET}-variable."
     local file="/etc/vconsole.conf"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo \"KEYMAP=$keyboard_layout\" > $file"; then
+    if ! exec_cmd "echo \"KEYMAP=$keyboard_layout\" | tee $file"; then
       newline
       error "Couldn't persist ${ITALICS}KEYMAP${RESET} variable."
       return
@@ -778,7 +757,7 @@ function network_configuration() {
   info 'Setting host name.'
   local file="/etc/hostname"
   [[ -n "$test_script" ]] && file="/dev/null"
-  if ! exec_cmd "echo \"$hostname\" > $file"; then
+  if ! exec_cmd "echo \"$hostname\" | tee $file"; then
     newline
     error "Couldn't save host name."
     return
@@ -794,7 +773,7 @@ eof
 )"
   local file="/etc/hosts"
   [[ -n "$test_script" ]] && file="/dev/null"
-  if ! exec_cmd "echo \"$value\" > $file"; then
+  if ! exec_cmd "echo \"$value\" | tee $file"; then
     newline
     error "Couldn't write hosts file."
     return
@@ -808,7 +787,7 @@ function initramfs() {
   newline
   if [[ -n "$edit_mkinitcpio" ]]; then
     info 'Editing /etc/mkinitcpio.conf.'
-    vim "/etc/mkinitcpio.conf"
+    NO_PIPE=1 exec_cmd vim "/etc/mkinitcpio.conf"
     if ! exec_cmd mkinitcpio -p linux; then
       error "Couldn't rebuild initramfs image."
       return
@@ -826,7 +805,7 @@ function root_password() {
   print_title "3.7 Root password"
   newline
   info 'Please set a root password:'
-  if ! passwd; then
+  if ! NO_PIPE=1 exec_cmd passwd; then
     newline
     error "Couldn't set the root password."
     return
@@ -845,17 +824,12 @@ function boot_loader() {
     newline
     error "Couldn't run command successfully."
     return
-  else
-    newline
-    info 'Done.'
   fi
   newline
   info 'Checking for Intel.'
   if ! exec_cmd grep \'Intel\' /proc/cpuinfo; then
     newline
     info 'No Intel CPU found.'
-    newline
-    info 'Done.'
     return
   fi
   newline
@@ -889,8 +863,16 @@ function reboot_system() {
     bashrc="/dev/null"
     oldbashrc="/dev/null"
   fi
-  exec_cmd "cp \"$oldbashrc\" \"$bashrc\""
-  exec_cmd "echo \"~/arch.sh -pl $oldlogfile\" >> \"$bashrc\""
+  local bashrc="/mnt/root/.bashrc"
+  local oldbashrc="${bashrc}.bak"
+  if [[ -n "$test_script" ]]; then
+    bashrc="/dev/null"
+    oldbashrc="/dev/null"
+  fi
+  exec_cmd "cp $oldbashrc $bashrc"
+  local run=''
+  [[ -n "$run_through" ]] && run='r'
+  exec_cmd "echo \"~/arch.sh -${run}p\" | tee -a $bashrc"
   newline
   info 'Please exit the chroot now(Ctrl+D).'
   exit 0
@@ -899,6 +881,7 @@ function reboot_system() {
 ################################################################################
 # 5
 function post_installation() {
+  _post=''
   local -i number=1
   while : ; do
     prepare_pane
@@ -929,10 +912,10 @@ function post_installation() {
           continue
           ;;
       esac
-      pause
       break
     done
     pop suggestion number
+    trace "In Post-Installation. Next number: $number."
   done
 }
 
@@ -943,17 +926,18 @@ function general_recommendations() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1 General Recommendations"
     [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
-                "5.1.1  System Administration" \
-                "5.1.2  Package management" \
-                "5.1.3  Booting" \
-                "5.1.4  Graphical User Interface" \
-                "5.1.5  Power Management" \
-                "5.1.6  Multimedia" \
-                "5.1.7  Networking" \
-                "5.1.8  Input Devices" \
-                "5.1.9  Optimization" \
-                "5.1.10 System Service" \
-                "5.1.11 Console Improvements"
+      "5.1.1  System Administration" \
+      "5.1.2  Package management" \
+      "5.1.3  Booting" \
+      "5.1.4  Graphical User Interface" \
+      "5.1.5  Power Management" \
+      "5.1.6  Multimedia" \
+      "5.1.7  Networking" \
+      "5.1.8  Input Devices" \
+      "5.1.9  Optimization" \
+      "5.1.10 System Service" \
+      "5.1.11 Appearance" \
+      "5.1.12 Console Improvements"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -979,37 +963,34 @@ function general_recommendations() {
           ;;
         5)
           push suggestion 6
-          NYI
           power_management
           ;;
         6)
           push suggestion 7
-          NYI
           multimedia
           ;;
         7)
           push suggestion 8
-          NYI
           networking
           ;;
         8)
           push suggestion 9
-          NYI
           input_devices
           ;;
         9)
           push suggestion 10
-          NYI
           optimization
           ;;
         10)
           push suggestion 11
-          NYI
           system_service
           ;;
         11)
+          push suggestion 12
+          appearance
+          ;;
+        12)
           push suggestion 0
-          NYI
           console_improvements
           ;;
         *)
@@ -1020,10 +1001,10 @@ function general_recommendations() {
           continue
           ;;
       esac
-      pause
       break
     done
     pop suggestion number
+    trace "In General Recommendations. Next number: $number."
   done
 }
 
@@ -1034,10 +1015,10 @@ function system_administration() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.1 System Administration"
     [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
-                "5.1.1.1 Users and Groups" \
-                "5.1.1.2 Privilege Escalation" \
-                "5.1.1.3 Service Management" \
-                "5.1.1.4 System Maintenance"
+      "5.1.1.1 Users and Groups" \
+      "5.1.1.2 Privilege Escalation" \
+      "5.1.1.3 Service Management" \
+      "5.1.1.4 System Maintenance"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -1073,6 +1054,7 @@ function system_administration() {
       break
     done
     pop suggestion number
+    trace "In System Administration. Next number: $number."
   done
 }
 
@@ -1148,8 +1130,7 @@ function system_maintenance() {
     info 'Setting password policy.'
     local file="/etc/pam.d/passwd"
     [[ -n "$test_script" ]] && file="/dev/null"
-    exec_cmd setup_pw_policy
-    if ! exec_cmd "setup_pw_policy > $file"; then
+    if ! exec_cmd "setup_pw_policy | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1159,8 +1140,7 @@ function system_maintenance() {
     info 'Setting lock out policy.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
-    exec_cmd setup_lockout_policy
-    if ! exec_cmd "setup_lockout_policy > $file"; then
+    if ! exec_cmd "setup_lockout_policy | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1170,7 +1150,7 @@ function system_maintenance() {
     info 'Writing fail delay to /etc/pam.d/system-login.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" > $file"; then
+    if ! exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1196,7 +1176,7 @@ function system_maintenance() {
       info 'Restricting kernel log access to root.'
       local file="/etc/sysctl.d/50-dmesg-restrict.conf"
       [[ -n "$test_script" ]] && file="/dev/null"
-      if ! exec_cmd "echo \"kernel.dmesg_restrict = 1\" >> $file"; then
+      if ! exec_cmd "echo \"kernel.dmesg_restrict = 1\" | tee -a $file"; then
         newline
         warn 'Failure'
       fi
@@ -1206,7 +1186,7 @@ function system_maintenance() {
       info 'Restricting kernel pointer access.'
       local file="/etc/sysctl.d/50-kptr-restrict.conf"
       [[ -n "$test_script" ]] && file="/dev/null"
-      if ! exec_cmd "echo \"kernel.kptr_restrict = $restrict_k_ptr_acc\" >> $file"; then
+      if ! exec_cmd "echo \"kernel.kptr_restrict = $restrict_k_ptr_acc\" | tee -a $file"; then
         newline
         warn 'Failure'
       fi
@@ -1217,7 +1197,7 @@ function system_maintenance() {
     info 'Disabling the BPF JIT compiler.'
     local file="/proc/sys/net/core/bpf_jit_enable"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo $bpf_jit_enable > $file"; then
+    if ! exec_cmd "echo $bpf_jit_enable | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1242,7 +1222,7 @@ function system_maintenance() {
     info "Setting TCP SYN max backlog to $tcp_max_syn_backlog."
     local file="/proc/sys/net/ipv4/tcp_max_syn_backlog"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo $tcp_max_syn_backlog > $file"; then
+    if ! exec_cmd "echo $tcp_max_syn_backlog | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1252,7 +1232,7 @@ function system_maintenance() {
     info 'Enabling TCP SYN cookie protection.'
     local file="/proc/sys/net/ipv4/tcp_syncookies"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1262,7 +1242,7 @@ function system_maintenance() {
     info 'Enabling TCP rfc1337.'
     local file="/proc/sys/net/ipv4/tcp_rfc1337"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1272,13 +1252,13 @@ function system_maintenance() {
     info 'Enabling martian packet logging.'
     local file="/proc/sys/net/ipv4/conf/default/log_martians"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/log_martians"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1288,7 +1268,7 @@ function system_maintenance() {
     info 'Ignore echo broadcast requests.'
     local file="/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1298,7 +1278,7 @@ function system_maintenance() {
     info 'Ignore bogus error responses.'
     local file="/proc/sys/net/ipv4/icmp_ignore_bogus_error_responses"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 1 > $file"; then
+    if ! exec_cmd "echo 1 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1308,13 +1288,13 @@ function system_maintenance() {
     info 'Disable sending redirects.'
     local file="/proc/sys/net/ipv4/conf/default/send_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/send_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1324,25 +1304,25 @@ function system_maintenance() {
     info 'Disable accepting redirects.'
     local file="/proc/sys/net/ipv4/conf/default/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv6/conf/default/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv6/conf/all/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd "echo 0 > $file"; then
+    if ! exec_cmd "echo 0 | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1426,11 +1406,11 @@ function package_management() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.2 Package Management"
     [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
-                "5.1.2.1 Pacman" \
-                "5.1.2.2 Repositories" \
-                "5.1.2.3 Mirrors" \
-                "5.1.2.4 Arch Build System" \
-                "5.1.2.5 Arch User Repository"
+      "5.1.2.1 Pacman" \
+      "5.1.2.2 Repositories" \
+      "5.1.2.3 Mirrors" \
+      "5.1.2.4 Arch Build System" \
+      "5.1.2.5 Arch User Repository"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -1470,6 +1450,7 @@ function package_management() {
       break
     done
     pop suggestion number
+    trace "In Package Management. Next number: $number."
   done
 }
 
@@ -1557,10 +1538,10 @@ function booting() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.3 Booting"
     [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
-                "5.1.3.1 Hardware auto-recognition" \
-                "5.1.3.2 Microcode" \
-                "5.1.3.3 Retaining boot messages" \
-                "5.1.3.4 Num Lock activation"
+      "5.1.3.1 Hardware auto-recognition" \
+      "5.1.3.2 Microcode" \
+      "5.1.3.3 Retaining boot messages" \
+      "5.1.3.4 Num Lock activation"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -1596,6 +1577,7 @@ function booting() {
       break
     done
     pop suggestion number
+    trace "In Booting. Next number: $number."
   done
 }
 
@@ -1611,6 +1593,7 @@ function hardware_auto_recognition() {
     error 'Failed.'
     return
   fi
+  newline
   info 'Done.'
 }
 
@@ -1636,7 +1619,7 @@ function retaining_boot_messages() {
       exec_cmd mkdir -p "$(dirname $file)"
     fi
     if ! exec_cmd "echo \"[Service]
-TTYVTDisallocate=no\" > $file"; then
+TTYVTDisallocate=no\" | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1661,7 +1644,7 @@ function num_lock_activation() {
       exec_cmd mkdir -p "$(dirname $file)"
     fi
     if ! exec_cmd "echo \"[Service]
-ExecStartPre=/bin/sh -c 'setleds -D +num < /dev/%I'\" > $file"; then
+ExecStartPre=/bin/sh -c 'setleds -D +num < /dev/%I'\" | tee $file"; then
       newline
       warn 'Failure'
     fi
@@ -1679,11 +1662,11 @@ function gui() {
     prepare_pane
     [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.4 Graphical User Interface"
     [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
-                "5.1.4.1 Display server" \
-                "5.1.4.2 Display drivers" \
-                "5.1.4.3 Desktop environments" \
-                "5.1.4.4 Window managers" \
-                "5.1.4.5 Display manager"
+      "5.1.4.1 Display server" \
+      "5.1.4.2 Display drivers" \
+      "5.1.4.3 Desktop environments" \
+      "5.1.4.4 Window managers" \
+      "5.1.4.5 Display manager"
     while : ; do
       answer=$number
       [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
@@ -1723,6 +1706,7 @@ function gui() {
       break
     done
     pop suggestion number
+    trace "In Graphical User Interface. Next number: $number."
   done
 }
 
@@ -1765,6 +1749,7 @@ function display_drivers() {
     error 'Failed.'
     return
   fi
+  newline
   info 'Done.'
 }
 
@@ -1780,6 +1765,7 @@ function desktop_environments() {
     error 'Failed.'
     return
   fi
+  newline
   info 'Done.'
 }
 
@@ -1795,6 +1781,7 @@ function window_managers() {
     error 'Failed.'
     return
   fi
+  newline
   info 'Done.'
 }
 
@@ -1810,8 +1797,856 @@ function display_manager() {
     error 'Failed.'
     return
   fi
+  newline
   info 'Done.'
 }
+
+
+# 5.1.5
+function power_management() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.5 Power management"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.5.1 ACPI events" \
+      "5.1.5.2 CPU frequency scaling" \
+      "5.1.5.3 Laptops" \
+      "5.1.5.4 Suspend and Hibernate"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          acpi_events
+          ;;
+        2)
+          push suggestion 3
+          cpu_frequency_scaling
+          ;;
+        3)
+          push suggestion 4
+          laptops
+          ;;
+        4)
+          push suggestion 0
+          suspend_and_hibernate
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Power Management. Next number: $number."
+  done
+}
+
+# 5.1.5.1
+function acpi_events() {
+  prepare_pane
+  print_title "5.1.5.1 ACPI events"
+  newline
+  if [[ -n "$install_acpid" ]]; then
+    info 'Installing acpid.'
+    if ! exec_cmd pacman -S acpid --color=always --noconfirm; then
+      newline
+      warn 'Failure'
+    else
+      if ! exec_cmd systemctl enable acpid.service; then
+        newline
+        warn 'Failure'
+      fi
+    fi
+    newline
+  fi
+  info 'Executing the setup_acpi routine:'
+  if ! exec_cmd setup_acpi; then
+    newline
+    error "Couldn't run command."
+  else
+    newline
+    info 'Done.'
+  fi
+}
+
+# 5.1.5.2
+function cpu_frequency_scaling() {
+  prepare_pane
+  print_title "5.1.5.2 CPU frequency scaling"
+  newline
+  NYI
+}
+
+# 5.1.5.3
+function laptops() {
+  prepare_pane
+  print_title "5.1.5.3 Laptops"
+  newline
+  NYI
+}
+
+# 5.1.5.4
+function suspend_and_hibernate() {
+  prepare_pane
+  print_title "5.1.5.4 Suspend and Hibernate"
+  newline
+  NYI
+}
+
+
+# 5.1.6
+function multimedia() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.6 Multimedia"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.6.1 Sound" \
+      "5.1.6.2 Browser plugins" \
+      "5.1.6.3 Codecs"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          sound
+          ;;
+        2)
+          push suggestion 3
+          browser_plugins
+          ;;
+        3)
+          push suggestion 0
+          codecs
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Multimedia. Next number: $number."
+  done
+}
+
+# 5.1.6.1
+function sound() {
+  prepare_pane
+  print_title "5.1.6.1 Sound"
+  newline
+  NYI
+}
+
+# 5.1.6.2
+function browser_plugins() {
+  prepare_pane
+  print_title "5.1.6.2 Browser plugins"
+  newline
+  NYI
+}
+
+# 5.1.6.3
+function codecs() {
+  prepare_pane
+  print_title "5.1.6.3 Codecs"
+  newline
+  NYI
+}
+
+
+# 5.1.7
+function networking() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.7 Networking"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.7.1 Clock synchronization" \
+      "5.1.7.2 DNS security" \
+      "5.1.7.3 Setting up a firewall" \
+      "5.1.7.4 Resource sharing"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          clock_synchronization
+          ;;
+        2)
+          push suggestion 3
+          dns_security
+          ;;
+        3)
+          push suggestion 4
+          setting_up_a_firewall
+          ;;
+        4)
+          push suggestion 0
+          resource_sharing
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Networking. Next number: $number."
+  done
+}
+
+# 5.1.7.1
+function clock_synchronization() {
+  prepare_pane
+  print_title "5.1.7.1 Clock synchronization"
+  newline
+  NYI
+}
+
+# 5.1.7.2
+function dns_security() {
+  prepare_pane
+  print_title "5.1.7.2 DNS security"
+  newline
+  NYI
+}
+
+# 5.1.7.3
+function setting_up_a_firewall() {
+  prepare_pane
+  print_title "5.1.7.3 Setting up a firewall"
+  newline
+  NYI
+}
+
+# 5.1.7.4
+function resource_sharing() {
+  prepare_pane
+  print_title "5.1.7.4 Resource sharing"
+  newline
+  NYI
+}
+
+
+# 5.1.8
+function input_devices() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.8 Input devices"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.8.1 Keyboard layouts" \
+      "5.1.8.2 Mouse buttons" \
+      "5.1.8.3 Laptop touchpads" \
+      "5.1.8.4 TrackPoints"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          keyboard_layouts
+          ;;
+        2)
+          push suggestion 3
+          mouse_buttons
+          ;;
+        3)
+          push suggestion 4
+          laptop_touchpads
+          ;;
+        4)
+          push suggestion 0
+          trackpoints
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Input devices. Next number: $number."
+  done
+}
+
+# 5.1.8.1
+function keyboard_layouts() {
+  prepare_pane
+  print_title "5.1.8.1 Keyboard layouts"
+  newline
+  NYI
+}
+
+# 5.1.8.2
+function mouse_buttons() {
+  prepare_pane
+  print_title "5.1.8.2 Mouse buttons"
+  newline
+  NYI
+}
+
+# 5.1.8.3
+function laptop_touchpads() {
+  prepare_pane
+  print_title "5.1.8.3 Laptop touchpads"
+  newline
+  NYI
+}
+
+# 5.1.8.4
+function trackpoints() {
+  prepare_pane
+  print_title "5.1.8.4 TrackPoints"
+  newline
+  NYI
+}
+
+
+# 5.1.9
+function optimization() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.9 Optimization"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.9.1 Benchmarking" \
+      "5.1.9.2 Improving performance" \
+      "5.1.9.3 Solid state drives"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          benchmarking
+          ;;
+        2)
+          push suggestion 3
+          improving_performance
+          ;;
+        3)
+          push suggestion 0
+          solid_state_drives
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Optimization. Next number: $number."
+  done
+}
+
+# 5.1.9.1
+function benchmarking() {
+  prepare_pane
+  print_title "5.1.9.1 Benchmarking"
+  newline
+  NYI
+}
+
+# 5.1.9.2
+function improving_performance() {
+  prepare_pane
+  print_title "5.1.9.2 Improving performance"
+  newline
+  NYI
+}
+
+# 5.1.9.3
+function solid_state_drives() {
+  prepare_pane
+  print_title "5.1.9.3 Solid state drives"
+  newline
+  NYI
+}
+
+
+# 5.1.10
+function system_service() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.10 System service"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.10.1 File index and search" \
+      "5.1.10.2 Local mail delivery" \
+      "5.1.10.3 Printing"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          file_index_and_search
+          ;;
+        2)
+          push suggestion 3
+          local_mail_delivery
+          ;;
+        3)
+          push suggestion 0
+          printing
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In System service. Next number: $number."
+  done
+}
+
+# 5.1.10.1
+function file_index_and_search() {
+  prepare_pane
+  print_title "5.1.10.1 File index and search"
+  newline
+  NYI
+}
+
+# 5.1.10.2
+function local_mail_delivery() {
+  prepare_pane
+  print_title "5.1.10.2 Local mail delivery"
+  newline
+  NYI
+}
+
+# 5.1.10.3
+function printing() {
+  prepare_pane
+  print_title "5.1.10.3 Printing"
+  newline
+  NYI
+}
+
+
+# 5.1.11
+function appearance() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.11 Appearance"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.11.1 Fonts" \
+      "5.1.11.2 GTK+ and Qt themes"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          fonts
+          ;;
+        2)
+          push suggestion 0
+          gtkp_and_qt_themes
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Appearance. Next number: $number."
+  done
+}
+
+# 5.1.11.1
+function fonts() {
+  prepare_pane
+  print_title "5.1.11.1 Fonts"
+  newline
+  NYI
+}
+
+# 5.1.11.2
+function gtkp_and_qt_themes() {
+  prepare_pane
+  print_title "5.1.11.2 GTK+ and Qt themes"
+  newline
+  NYI
+}
+
+
+# 5.1.12
+function console_improvements() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.12 Console improvements"
+    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+      "5.1.12.1 Tab-completion enhancements" \
+      "5.1.12.2 Aliases" \
+      "5.1.12.3 Alternative shells" \
+      "5.1.12.4 Bash additions" \
+      "5.1.12.5 Colored output" \
+      "5.1.12.6 Compressed files" \
+      "5.1.12.7 Console prompt" \
+      "5.1.12.8 Emacs shell" \
+      "5.1.12.9 Mouse support" \
+      "5.1.12.10 Scrollback buffer" \
+      "5.1.12.11 Session management"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          tab_completion_enhancements
+          ;;
+        2)
+          push suggestion 3
+          aliases
+          ;;
+        3)
+          push suggestion 4
+          alternative_shells
+          ;;
+        4)
+          push suggestion 5
+          bash_additions
+          ;;
+        5)
+          push suggestion 6
+          colored_output
+          ;;
+        6)
+          push suggestion 7
+          compressed_files
+          ;;
+        7)
+          push suggestion 8
+          console_prompt
+          ;;
+        8)
+          push suggestion 9
+          emacs_shell
+          ;;
+        9)
+          push suggestion 10
+          mouse_support
+          ;;
+        10)
+          push suggestion 11
+          scrollback_buffer
+          ;;
+        11)
+          push suggestion 0
+          session_management
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      pause
+      break
+    done
+    pop suggestion number
+    trace "In Console improvements. Next number: $number."
+  done
+}
+
+# 5.1.12.1
+function tab_completion_enhancements() {
+  prepare_pane
+  print_title "5.1.12.1 Tab-completion enhancements"
+  newline
+  NYI
+}
+
+# 5.1.12.2
+function aliases() {
+  prepare_pane
+  print_title "5.1.12.2 Aliases"
+  newline
+  NYI
+}
+
+# 5.1.12.3
+function alternative_shells() {
+  prepare_pane
+  print_title "5.1.12.3 Alternative shells"
+  newline
+  NYI
+}
+
+# 5.1.12.4
+function bash_additions() {
+  prepare_pane
+  print_title "5.1.12.4 Bash additions"
+  newline
+  NYI
+}
+
+# 5.1.12.5
+function colored_output() {
+  prepare_pane
+  print_title "5.1.12.5 Colored output"
+  newline
+  NYI
+}
+
+# 5.1.12.6
+function compressed_files() {
+  prepare_pane
+  print_title "5.1.12.6 Compressed files"
+  newline
+  NYI
+}
+
+# 5.1.12.7
+function console_prompt() {
+  prepare_pane
+  print_title "5.1.12.7 Console prompt"
+  newline
+  NYI
+}
+
+# 5.1.12.8
+function emacs_shell() {
+  prepare_pane
+  print_title "5.1.12.8 Emacs shell"
+  newline
+  NYI
+}
+
+# 5.1.12.9
+function mouse_support() {
+  prepare_pane
+  print_title "5.1.12.9 Mouse support"
+  newline
+  NYI
+}
+
+# 5.1.12.10
+function scrollback_buffer() {
+  prepare_pane
+  print_title "5.1.12.10 Scrollback buffer"
+  newline
+  NYI
+}
+
+# 5.1.12.11
+function session_management() {
+  prepare_pane
+  print_title "5.1.12.11 Session management"
+  newline
+  NYI
+}
+
+
+# 5.2
+function applications() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.2 Applications"
+    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+      "5.2.1 Internet" \
+      "5.2.2 Multimedia" \
+      "5.2.3 Utilities" \
+      "5.2.4 Documents and texts" \
+      "5.2.5 Security" \
+      "5.2.6 Science" \
+      "5.2.7 Others"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          internet
+          ;;
+        2)
+          push suggestion 3
+          multimedia_applications
+          ;;
+        3)
+          push suggestion 4
+          utilities
+          ;;
+        4)
+          push suggestion 5
+          documents_and_texts
+          ;;
+        5)
+          push suggestion 6
+          security
+          ;;
+        6)
+          push suggestion 7
+          science
+          ;;
+        7)
+          push suggestion 0
+          others
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      break
+    done
+    pop suggestion number
+    trace "In Applications. Next number: $number."
+  done
+}
+
+# 5.2.1
+function internet() {
+  local -i number=1
+  while : ; do
+    prepare_pane
+    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.2.1 Internet"
+    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+      "5.2.1.1 Network connection" \
+      "5.2.1.2 Web browsers" \
+      "5.2.1.3 Web servers" \
+      "5.2.1.4 ACME clients" \
+      "5.2.1.5 File sharing" \
+      "5.2.1.6 Communication" \
+      "5.2.1.7 News, RSS, and blogs" \
+      "5.2.1.8 Remote desktop"
+    while : ; do
+      answer=$number
+      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      case "$answer" in
+        0)
+          return
+          ;;
+        1)
+          push suggestion 2
+          network_connection
+          ;;
+        2)
+          push suggestion 3
+          web_browsers
+          ;;
+        3)
+          push suggestion 4
+          web_servers
+          ;;
+        4)
+          push suggestion 5
+          acme_clients
+          ;;
+        5)
+          push suggestion 6
+          file_sharing
+          ;;
+        6)
+          push suggestion 7
+          communication
+          ;;
+        7)
+          push suggestion 8
+          news_rss_and_blogs
+          ;;
+        8)
+          push suggestion 0
+          remote_desktop
+          ;;
+        *)
+          newline
+          error "Please choose an option from above."
+          tput rc
+          tput dl 2
+          continue
+          ;;
+      esac
+      break
+    done
+    pop suggestion number
+    trace "In Internet. Next number: $number."
+  done
+}
+
+
+
 
 
 
@@ -1987,18 +2822,14 @@ function read_answer() {
 }
 function exec_cmd() {
   debug "Executing: $*"
-  tput hpa $left
+  newline
+  tput cuu1
   echo " ${BOLD}${FG_RED}\$ ${RESET}${BOLD}$*${RESET}"
-  eval "$*" 2>&1 | {
-    local -i l=1
-    while read line; do
-      printf "${BG_LGRAY}${FG_BLACK}%4d:${RESET}" $l
-      tput hpa 5
-      echo "$line"
-      debug "           $line"
-      ((l++))
-    done
-  }
+  if [[ -n "$NO_PIPE" ]]; then
+    eval "$*"
+  else
+    eval "$*" 2>&1 | nl -w $left -b a -s':' | sed "s/^..\{$left\}/${BG_LGRAY}${FG_BLACK}\0${RESET}/g"
+  fi
   local retval=$(check_retval ${PIPESTATUS[0]})
   return $retval
 }
@@ -2006,8 +2837,9 @@ function prepare_pane() {
   if [[ -n "$run_through" ]]; then
     left=$(((${#FUNCNAME[@]}-3)*2))
     [[ -n "$test_script" ]] && ((left--))
+  else
+    tput clear
   fi
-  [[ -z "$run_through" ]] && tput clear
 }
 
 # Start script

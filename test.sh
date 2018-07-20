@@ -493,7 +493,7 @@ showconsolefont() {
 QRSTUVWXYZ[\]^_`
 eof
 }
-tee() { return; }
+#tee() { return; }
 reboot() { return; }
 locale-gen() { return; }
 pacstrap() {
@@ -533,7 +533,6 @@ UUID=18C8-A366      	/boot     	vfat      	rw,relatime,fmask=0022,dmask=0022,cod
 UUID=<uuid>	          none      	swap      	defaults,pri=-2	0 0
 eof
 }
-fstab_file="/dev/null"
 cp() { return; }
 ln() { return; }
 hwclock() { return; }
@@ -649,6 +648,7 @@ arch-chroot() { bash; }
 grub-install() { return; }
 grub-mkconfig() { return; }
 tar() { return; }
+passwd() { return; }
 
 test_script=true
 

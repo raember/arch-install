@@ -25,7 +25,7 @@ ping_address="archlinux.org" # default: "8.8.8.8"
 disk="/dev/sda" # For convenience - irrelevant for script
 function partition_disks() {
   #bash # For manual setup
-  parted -s $disk \
+  exec_cmd parted -s $disk \
     mklabel gpt \
     mkpart primary fat32 1MB 578MB \
     mkpart primary linux-swap 578MB 11.3GB \
@@ -35,17 +35,17 @@ function partition_disks() {
 #### 1.6 Format the partitions
 function format_partitions() {
   #bash # For manual setup
-  mkfs.fat -F32 ${disk}1
-  mkswap ${disk}2
-  swapon ${disk}2
-  mkfs.ext4 ${disk}3
+  exec_cmd mkfs.fat -F32 ${disk}1
+  exec_cmd mkswap ${disk}2
+  exec_cmd swapon ${disk}2
+  exec_cmd mkfs.ext4 ${disk}3
 }
 #### 1.7 Mount the file systems
 function mount_partitions() {
   #bash # For manual setup
-  mount ${disk}3 /mnt
-  mkdir -p /mnt/boot
-  mount ${disk}1 /mnt/boot
+  exec_cmd mount ${disk}3 /mnt
+  exec_cmd mkdir -p /mnt/boot
+  exec_cmd mount ${disk}1 /mnt/boot
 }
 
 ################################################################################
@@ -153,13 +153,13 @@ edit_mkinitcpio=1 # For editing the mkinitcpio.conf(default: '')
 #### 3.9 Boot loader
 function install_bootloader() {
   #bash # For manual setup
-  pacman -S grub
-  grub-install --target=i386-pc $disk
-  grub-mkconfig -o /boot/grub/grub.cfg
+  exec_cmd pacman -S grub
+  exec_cmd grub-install --target=i386-pc $disk
+  exec_cmd grub-mkconfig -o /boot/grub/grub.cfg
 }
 function configure_microcode() {
   #bash # For manual setup
-  grub-mkconfig -o /boot/grub/grub.cfg
+  exec_cmd grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 ################################################################################
@@ -176,12 +176,12 @@ function configure_microcode() {
 #### 5.1.1.1 Users and Groups
 add_users_and_groups() {
   local usr="raphael"
-  useradd -mG wheel,users,sys,rfkill,log,http,games,ftp -s /bin/zsh -c "Raphael Emberger" $usr
-  passwd $usr
+  exec_cmd "useradd -mG wheel,users,sys,rfkill,log,http,games,ftp -s /bin/zsh -c 'Raphael Emberger' $usr"
+  NO_PIPE=1 exec_cmd passwd $usr
 }
 #### 5.1.1.2 Privilege Escalation
 handle_privilage_escalation() { # Allow users of group "wheel" to use su/sudo
-  sed -i 's/^# \(%wheel ALL=(ALL) ALL\)$/\1/g' /etc/sudoers
+  exec_cmd "sed -i 's/^# \(%wheel ALL=(ALL) ALL\)$/\1/g' /etc/sudoers"
 }
 #### 5.1.1.3 Service Management
 #### 5.1.1.4 System Maintenance
@@ -210,8 +210,8 @@ bpf_jit_enable=0 # En-/disable BPF JIT compiler(default: 1)
 # Install sandbox application(default: '')
 sandbox_app="firejail,lxc" # {firejail,bubblewrap,lxc,virtualbox}
 setup_firewall() {
-  pacman -S ufw
-  systemctl enable ufw.service
+  exec_cmd pacman -S ufw
+  exec_cmd systemctl enable ufw.service
 }
 tcp_max_syn_backlog= # Change max syn backlog(default: '' => 256)
 tcp_syn_cookie_prot=1 # Helps protect against SYN flood attacks(default: '')
@@ -227,6 +227,8 @@ ssh_deny_root_login=1 # default: ''
 install_dnssec= # default: ''
 install_dnscrypt= # default: ''
 install_dnsmasq= # default: ''
+########################################
+# 5.1.2 Package management
 #### 5.1.2.1 Pacman
 #### 5.1.2.2 Repositories
 enable_multilib=1 # default: ''
@@ -239,15 +241,17 @@ install_pkgstats= # default: ''
 #### 5.1.2.5 Arch User Repository
 aur_helper="pikaur" # default: '' => No automatic AUR package installation
 install_aur_helper() {
-  pacman -S git gvim
-  git clone https://aur.archlinux.org/${aur_helper}.git
-  cd $aur_helper
-  vim PKGBUILD
-  makepkg -fsri
+  exec_cmd pacman -S git gvim
+  exec_cmd git clone https://aur.archlinux.org/${aur_helper}.git
+  exec_cmd cd $aur_helper
+  NO_PIPE=1 exec_cmd vim PKGBUILD
+  exec_cmd makepkg -fsri
   local retval=$?
-  cd -
+  exec_cmd cd -
   return $retval
 }
+########################################
+# 5.1.3 Booting
 #### 5.1.3.1 Hardware auto-recognition
 setup_hardware_auto_recognition() {
   return
@@ -257,16 +261,18 @@ setup_hardware_auto_recognition() {
 retain_boot_msgs=1 # default: ''
 #### 5.1.3.4 Num Lock activation
 activate_numlock_on_boot=1 # Extends the getty service(default: '')
+########################################
+# 5.1.4 Graphical user interface
 #### 5.1.4.1 Display server
 disp_server="xorg" # {xorg,wayland} default: "xorg"
 #### 5.1.4.2 Display drivers
 install_display_drivers() {
   # Laptop: NVE7/GK107
   # Desktop: NVCF
-  pacman -S \
+  exec_cmd pacman -S \
     mesa bumblebee nvidia lib32-nvidia-utils lib32-virtualgl \
     --color=always --noconfirm
-  systemctl enable bumblebeed.service
+  exec_cmd systemctl enable bumblebeed.service
 }
 #### 5.1.4.3 Desktop environments
 install_de() {
@@ -274,13 +280,146 @@ install_de() {
 }
 #### 5.1.4.4 Window managers
 install_wm() {
-  pacman -S bspwm sxhkd
+  exec_cmd pacman -S bspwm sxhkd
 }
 #### 5.1.4.5 Display manager
 install_dm() {
-  pacman -S lightdm lightdm-gtk-greeter
-  systemctl enable lightdm.service
+  exec_cmd pacman -S lightdm lightdm-gtk-greeter
+  exec_cmd systemctl enable lightdm.service
 }
+########################################
+# 5.1.5 Power management
+#### 5.1.5.1 ACPI events
+install_acpid=1 # default: ''
+setup_acpi() {
+  # exec_cmd sed -i 's/^#\(HandleLidSwitch\)=.*$/\1=suspend/g' /etc/systemd/logind.conf
+  exec_cmd echo "Hi"
+  return
+  # No need for sevice restart since we'll reboot at the end.
+}
+#### 5.1.5.2 CPU frequency scaling
+#### 5.1.5.3 Laptops
+#### 5.1.5.4 Suspend and Hibernate
+########################################
+# 5.1.6 Multimedia
+#### 5.1.6.1 Sound
+#### 5.1.6.2 Browser plugins
+#### 5.1.6.3 Codecs
+########################################
+# 5.1.7 Networking
+#### 5.1.7.1 Clock synchronization
+#### 5.1.7.2 DNS security
+#### 5.1.7.3 Setting up a firewall
+#### 5.1.7.4 Resource sharing
+########################################
+# 5.1.8 Input devices
+#### 5.1.8.1 Keyboard layouts
+#### 5.1.8.2 Mouse buttons
+#### 5.1.8.3 Laptop touchpads
+#### 5.1.8.4 TrackPoints
+########################################
+# 5.1.9 Optimization
+#### 5.1.9.1 Benchmarking
+#### 5.1.9.2 Improving performance
+#### 5.1.9.3 Solid state drives
+########################################
+# 5.1.10 System service
+#### 5.1.10.1 File index and search
+#### 5.1.10.2 Local mail delivery
+#### 5.1.10.3 Printing
+########################################
+# 5.1.11 Appearance
+#### 5.1.11.1 Fonts
+#### 5.1.11.2 GTK+ and Qt themes
+########################################
+# 5.1.12 Console improvements
+#### 5.1.12.1 Tab-completion enhancements
+#### 5.1.12.2 Aliases
+#### 5.1.12.3 Alternative shells
+#### 5.1.12.4 Bash additions
+#### 5.1.12.5 Colored output
+#### 5.1.12.6 Compressed files
+#### 5.1.12.7 Console prompt
+#### 5.1.12.8 Emacs shell
+#### 5.1.12.9 Mouse support
+#### 5.1.12.10 Scrollback buffer
+#### 5.1.12.11 Session management
+############################################################
+# 5.2 Applications
+#
+########################################
+# 5.2.1 Internet
+#### 5.2.1.1 Network connection
+#### 5.2.1.2 Web browsers
+#### 5.2.1.3 Web servers
+#### 5.2.1.4 ACME clients
+#### 5.2.1.5 File sharing
+#### 5.2.1.6 Communication
+#### 5.2.1.7 News, RSS, and blogs
+#### 5.2.1.8 Remote desktop
+########################################
+# 5.2.2 Multimedia
+#### 5.2.2.1 Codecs
+#### 5.2.2.2 Image
+#### 5.2.2.3 Audio
+#### 5.2.2.4 Video
+#### 5.2.2.5 Collection managers
+#### 5.2.2.6 Media servers
+#### 5.2.2.7 Metadata
+#### 5.2.2.8 Mobile device managers
+#### 5.2.2.9 Optical disc burning
+########################################
+# 5.2.3 Utilities
+#### 5.2.3.1 Terminal
+#### 5.2.3.2 Files
+#### 5.2.3.3 Development
+#### 5.2.3.4 Text input
+#### 5.2.3.5 Disks
+#### 5.2.3.6 System
+########################################
+# 5.2.4 Documents and texts
+#### 5.2.4.1 Text editors
+#### 5.2.4.2 Office
+#### 5.2.4.3 Markup languages
+#### 5.2.4.4 Document converters
+#### 5.2.4.5 Bibliographic reference managers
+#### 5.2.4.6 Readers and viewers
+#### 5.2.4.7 Scanning software
+#### 5.2.4.8 OCR software
+#### 5.2.4.9 Notes
+#### 5.2.4.10 Special writing environments
+#### 5.2.4.11 Language
+#### 5.2.4.12 Barcode generators and readers
+########################################
+# 5.2.5 Security
+#### 5.2.5.1 Network security
+#### 5.2.5.2 Firewall management
+#### 5.2.5.3 Threat and vulnerability detection
+#### 5.2.5.4 File security
+#### 5.2.5.5 Anti malware
+#### 5.2.5.6 Backup programs
+#### 5.2.5.7 Screen lockers
+#### 5.2.5.8 Password managers
+#### 5.2.5.9 Cryptography
+########################################
+# 5.2.6 Science
+#### 5.2.6.1 Mathematics
+#### 5.2.6.2 Chemistry and biology
+#### 5.2.6.3 Meteorology
+#### 5.2.6.4 Astronomy
+#### 5.2.6.5 Engineering
+#### 5.2.6.6 Physics
+#### 5.2.6.7 Geography
+#### 5.2.6.8 Communication systems
+#### 5.2.6.9 Simulation modeling
+########################################
+# 5.2.7 Others
+#### 5.2.7.1 Organization
+#### 5.2.7.2 Education
+#### 5.2.7.3 Accessibility
+#### 5.2.7.4 Display managers
+#### 5.2.7.5 Desktop environments
+
 
 
 
