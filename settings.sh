@@ -397,6 +397,10 @@ setup_fonts() {
   exec_cmd pacman -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
 }
 #### 5.1.11.2 GTK+ and Qt themes
+setup_fonts() {
+  exec_cmd pacman -S gtk3 gtk2 arc-gtk-theme breeze-gtk numix-gtk-theme materia-gtk-theme qt5-base qt4 breeze-kde4 breeze qtcurve-qt4 qtcurve-qt5 qt5-styleplugins lxappearance kde-gtk-config
+  exec_cmd $aur_helper -S oomox adwaita-qt4 adwaita-qt5
+}
 ########################################
 # 5.1.12 Console improvements
 #### 5.1.12.1 Tab-completion enhancements
