@@ -293,43 +293,109 @@ install_dm() {
 install_acpid=1 # default: ''
 setup_acpi() {
   # exec_cmd sed -i 's/^#\(HandleLidSwitch\)=.*$/\1=suspend/g' /etc/systemd/logind.conf
-  exec_cmd echo "Hi"
   return
   # No need for sevice restart since we'll reboot at the end.
 }
 #### 5.1.5.2 CPU frequency scaling
+setup_cpu_freq_scal() {
+  return
+}
 #### 5.1.5.3 Laptops
+setup_laptop() {
+  return
+}
 #### 5.1.5.4 Suspend and Hibernate
+setup_susp_and_hiber() {
+  return
+}
 ########################################
 # 5.1.6 Multimedia
 #### 5.1.6.1 Sound
+setup_sound() {
+  return
+}
 #### 5.1.6.2 Browser plugins
+setup_browser_plugins() {
+  return
+}
 #### 5.1.6.3 Codecs
+setup_codecs() {
+  exec_cmd pacman -S lame libfdk-aac flac openjpeg aom libde265 libmpeg2 libvpx x264 xvidcore gstreamer gst-plugins-good libavcodec ffmpeg
+}
 ########################################
 # 5.1.7 Networking
 #### 5.1.7.1 Clock synchronization
+setup_clock_sync() {
+  exec_cmd pacman -S ntp
+}
 #### 5.1.7.2 DNS security
+setup_dns_sec() {
+  exec_cmd pacman -S ntp
+}
 #### 5.1.7.3 Setting up a firewall
+setup_firewall() {
+  exec_cmd pacman -S ufw
+}
 #### 5.1.7.4 Resource sharing
+setup_res_share() {
+  exec_cmd pacman -S nfs-utils smbclient cifs-utils
+}
 ########################################
 # 5.1.8 Input devices
 #### 5.1.8.1 Keyboard layouts
+x11_keymap_layout='ch'
+x11_keymap_model='pc104'
+x11_keymap_variant=''
+x11_keymap_options=''
 #### 5.1.8.2 Mouse buttons
+setup_mouse() {
+  return
+}
 #### 5.1.8.3 Laptop touchpads
+setup_touchpad() {
+  exec_cmd pacman -S xf86-input-libinput
+}
 #### 5.1.8.4 TrackPoints
+setup_trackpoints() {
+  return
+}
 ########################################
 # 5.1.9 Optimization
 #### 5.1.9.1 Benchmarking
+setup_benchmarking() {
+  return
+}
 #### 5.1.9.2 Improving performance
+setup_benchmarking() {
+  return
+}
 #### 5.1.9.3 Solid state drives
+setup_ssd() {
+  return
+}
 ########################################
 # 5.1.10 System service
 #### 5.1.10.1 File index and search
+setup_file_index_and_search() {
+  exec_cmd pacman -S mlocate
+  exec_cmd updatedb
+}
 #### 5.1.10.2 Local mail delivery
+setup_mail() {
+  return
+}
 #### 5.1.10.3 Printing
+setup_printing() {
+  exec_cmd pacman -S cups cups-pdf avahi
+  exec_cmd systemctl enable org.cups.cupsd.service
+  exec_cmd systemctl enable avahi-daemon.service
+}
 ########################################
 # 5.1.11 Appearance
 #### 5.1.11.1 Fonts
+setup_fonts() {
+  exec_cmd pacman -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
+}
 #### 5.1.11.2 GTK+ and Qt themes
 ########################################
 # 5.1.12 Console improvements

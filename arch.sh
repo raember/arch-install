@@ -726,22 +726,22 @@ function locale() {
     return
   fi
   newline
-  info "Setting ${ITALICS}LANG${RESET}-variable."
+  info "Setting LANG-variable."
   local file="/etc/locale.conf"
   [[ -n "$test_script" ]] && file="/dev/null"
   if ! exec_cmd "echo \"LANG=$LANG\" | tee $file"; then
     newline
-    error "Couldn't persist ${ITALICS}LANG${RESET} variable."
+    error "Couldn't persist LANG variable."
     return
   fi
   if [[ -n "$keyboard_layout" ]]; then
     newline
-    info "Setting ${ITALICS}KEYMAP${RESET}-variable."
+    info "Setting KEYMAP-variable."
     local file="/etc/vconsole.conf"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo \"KEYMAP=$keyboard_layout\" | tee $file"; then
       newline
-      error "Couldn't persist ${ITALICS}KEYMAP${RESET} variable."
+      error "Couldn't persist KEYMAP variable."
       return
     fi
   fi
@@ -1884,24 +1884,45 @@ function acpi_events() {
 function cpu_frequency_scaling() {
   prepare_pane
   print_title "5.1.5.2 CPU frequency scaling"
+  info 'Running setup_cpu_freq_scal routine:'
+  setup_cpu_freq_scal
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.5.3
 function laptops() {
   prepare_pane
   print_title "5.1.5.3 Laptops"
+  info 'Running setup_laptop routine:'
+  setup_laptop
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.5.4
 function suspend_and_hibernate() {
   prepare_pane
   print_title "5.1.5.4 Suspend and Hibernate"
+  info 'Running setup_susp_and_hiber routine:'
+  setup_susp_and_hiber
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -1954,24 +1975,45 @@ function multimedia() {
 function sound() {
   prepare_pane
   print_title "5.1.6.1 Sound"
+  info 'Running setup_sound routine:'
+  setup_sound
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.6.2
 function browser_plugins() {
   prepare_pane
   print_title "5.1.6.2 Browser plugins"
+  info 'Running setup_browser_plugins routine:'
+  setup_browser_plugins
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.6.3
 function codecs() {
   prepare_pane
   print_title "5.1.6.3 Codecs"
+  info 'Running setup_codecs routine:'
+  setup_codecs
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -2029,24 +2071,45 @@ function networking() {
 function clock_synchronization() {
   prepare_pane
   print_title "5.1.7.1 Clock synchronization"
+  info 'Running setup_clock_sync routine:'
+  setup_clock_sync
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.7.2
 function dns_security() {
   prepare_pane
   print_title "5.1.7.2 DNS security"
+  info 'Running setup_dns_sec routine:'
+  setup_dns_sec
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.7.3
 function setting_up_a_firewall() {
   prepare_pane
   print_title "5.1.7.3 Setting up a firewall"
+  info 'Running setup_firewall routine:'
+  setup_firewall
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.7.4
@@ -2054,7 +2117,7 @@ function resource_sharing() {
   prepare_pane
   print_title "5.1.7.4 Resource sharing"
   newline
-  NYI
+  info 'Nothing to do.'
 }
 
 
@@ -2113,31 +2176,62 @@ function keyboard_layouts() {
   prepare_pane
   print_title "5.1.8.1 Keyboard layouts"
   newline
-  NYI
+  if ! exec_cmd localectl set-x11-keymap \
+    "\"$x11_keymap_layout\"" \
+    "\"$x11_keymap_model\"" \
+    "\"$x11_keymap_variant\"" \
+    "\"$x11_keymap_options\"" ; then
+    newline
+    error "Couldn't set keyboard layouts."
+  else
+    newline
+    info 'Done.'
+  fi
 }
 
 # 5.1.8.2
 function mouse_buttons() {
   prepare_pane
   print_title "5.1.8.2 Mouse buttons"
+  info 'Running setup_mouse routine:'
+  setup_mouse
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.8.3
 function laptop_touchpads() {
   prepare_pane
   print_title "5.1.8.3 Laptop touchpads"
+  info 'Running setup_touchpad routine:'
+  setup_touchpad
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.8.4
 function trackpoints() {
   prepare_pane
   print_title "5.1.8.4 TrackPoints"
+  info 'Running setup_trackpoints routine:'
+  setup_trackpoints
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -2190,24 +2284,45 @@ function optimization() {
 function benchmarking() {
   prepare_pane
   print_title "5.1.9.1 Benchmarking"
+  info 'Running setup_benchmarking routine:'
+  setup_benchmarking
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.9.2
 function improving_performance() {
   prepare_pane
   print_title "5.1.9.2 Improving performance"
+  info 'Running setup_benchmarking routine:'
+  setup_benchmarking
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.9.3
 function solid_state_drives() {
   prepare_pane
   print_title "5.1.9.3 Solid state drives"
+  info 'Running setup_ssd routine:'
+  setup_ssd
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -2260,24 +2375,45 @@ function system_service() {
 function file_index_and_search() {
   prepare_pane
   print_title "5.1.10.1 File index and search"
+  info 'Running setup_file_index_and_search routine:'
+  setup_file_index_and_search
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.10.2
 function local_mail_delivery() {
   prepare_pane
   print_title "5.1.10.2 Local mail delivery"
+  info 'Running setup_mail routine:'
+  setup_mail
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.10.3
 function printing() {
   prepare_pane
   print_title "5.1.10.3 Printing"
+  info 'Running setup_printing routine:'
+  setup_printing
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -2325,8 +2461,15 @@ function appearance() {
 function fonts() {
   prepare_pane
   print_title "5.1.11.1 Fonts"
+  info 'Running setup_fonts routine:'
+  setup_fonts
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.11.2
