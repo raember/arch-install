@@ -493,7 +493,7 @@ function run_reflector() {
   newline
   if ! type foo &>/dev/null; then
     info 'Reflector not installed. Installing now.'
-    if ! exec_cmd pacman -Sy reflector --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -Sy reflector; then
       newline
       error "Couldn't install reflector."
       return
@@ -834,7 +834,7 @@ function boot_loader() {
   fi
   newline
   info 'Intel CPU detected.'
-  if ! exec_cmd pacman -S intel-ucode --color=always --noconfirm; then
+  if ! exec_cmd pacman--color=always --noconfirm -S intel-ucode; then
     newline
     error "Couldn't install package."
     return
@@ -1165,7 +1165,7 @@ function system_maintenance() {
   fi
   if [[ -n "$install_hardened_linux" ]]; then
     info 'Installing hardened linux kernel.'
-    if ! exec_cmd pacman -S linux-hardened --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S linux-hardened then
       newline
       warn 'Failure'
     fi
@@ -1210,7 +1210,7 @@ function system_maintenance() {
     sandbox_app=${sandbox_app/lxc/lxc arch-install-scripts}
     [[ $sandbox_app =~ .*virtualbox.* ]] && \
       warn 'Please install the virtualbox host modules appropriate for your kernel.'
-    if ! exec_cmd pacman -S $sandbox_app --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S $sandbox_app; then
       newline
       warn 'Failure'
     fi
@@ -1334,7 +1334,7 @@ function system_maintenance() {
     [[ -n "$ssh_deny_root_login" ]] || \
     [[ -n "$ssh_client" ]]; then
     info 'Installing OpenSSH.'
-    if ! exec_cmd pacman -S $ssh_client --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S $ssh_client; then
       newline
       warn 'Failure'
     else
@@ -1365,7 +1365,7 @@ function system_maintenance() {
   newline
   if [[ -n "$install_dnssec" ]]; then
     info 'Installing dnssec.'
-    if ! exec_cmd pacman -S ldns --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S ldns; then
       newline
       warn 'Failure'
     fi
@@ -1373,7 +1373,7 @@ function system_maintenance() {
   fi
   if [[ -n "$install_dnscrypt" ]]; then
     info 'Installing dnscrypt.'
-    if ! exec_cmd pacman -S dnscrypt-proxy --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S dnscrypt-proxy; then
       newline
       warn 'Failure'
     fi
@@ -1383,7 +1383,7 @@ function system_maintenance() {
   newline
   if [[ -n "$install_dnsmasq" ]]; then
     info 'Installing dnsmasq.'
-    if ! exec_cmd pacman -S dnsmasq --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S dnsmasq; then
       newline
       warn 'Failure'
     else
@@ -1486,7 +1486,7 @@ function repositories() {
   newline
   if [[ -n "$install_pkgstats" ]]; then
     info 'Installing pkgstats.'
-    if ! exec_cmd pacman -S pkgstats --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S pkgstats; then
       newline
       warn 'Failure'
     fi
@@ -1718,14 +1718,14 @@ function display_server() {
   case "$disp_server" in
     xorg)
       info 'Installing Xorg:'
-      if ! exec_cmd pacman -S xorg --color=always --noconfirm; then
+      if ! exec_cmd pacman --color=always --noconfirm -S xorg; then
         newline
         warn 'Failure'
       fi
       ;;
     wayland)
       info 'Installing Wayland:'
-      if ! exec_cmd pacman -S weston --color=always --noconfirm; then
+      if ! exec_cmd pacman --color=always --noconfirm -S weston; then
         newline
         warn 'Failure'
       fi
@@ -1859,7 +1859,7 @@ function acpi_events() {
   newline
   if [[ -n "$install_acpid" ]]; then
     info 'Installing acpid.'
-    if ! exec_cmd pacman -S acpid --color=always --noconfirm; then
+    if ! exec_cmd pacman --color=always --noconfirm -S acpid; then
       newline
       warn 'Failure'
     else
@@ -2770,6 +2770,8 @@ function session_management() {
 
 # 5.2
 function applications() {
+  install_packages
+  return
   local -i number=1
   while : ; do
     prepare_pane
@@ -2902,66 +2904,37 @@ function internet() {
 }
 
 
-
-
-
-
-
-
-
-
-
-# 21
+# 5.2.X
 install_packages() {
-    print_section "Installation"
-    print_status "Install predefined packages"
-    packagelist=$(printf " %s" "${packages[@]}")
-    print_cmd "sudo pacman --color=always -S $packagelist" success
-    [ "$success" = false ] && print_neg "Failed - proceed with setup"
-    if [ "$aur_helper" != "" ] ; then
-        print_status "Install predefined AUR packages"
-        packagelist=$(printf " %s" "${aur_packages[@]}")
-        print_cmd "$aur_helper --color=always -S $packagelist" success
-        [ "$success" = false ] && print_neg "Failed - proceed with setup"
-        if [ "$numlock" = true ] ; then
-            print_status "Enabling numlock activation service"
-            print_cmd "sudo systemctl enable numLockOnTty" success
-            [ "$success" = false ] && print_fail "Failed"
-            print_status "Enabling succeeded"
-        fi
-    fi
-    print_end
-}
-
-# 22
-post_installation_old() {
-    print_section "Post-Installation"
-    print_cmd_invisible "cd $home" success
-    [ "$success" = false ] && print_fail "Failed"
-    if [ "$dotfiles_git" != "" ] ; then
-        print_status "Cloning dotfiles repo"
-        print_cmd "git clone '$dotfiles_git' '$dotfiles_dir'" success
-        [ "$success" = false ] && print_fail "Failed"
-        print_cmd_invisible "cd '$dotfiles_dir'" success
-        [ "$success" = false ] && print_fail "Failed"
-        if [ "$dotfiles_install" != "" ] ; then
-            print_cmd "'$dotfiles_install'" success
-            [ "$success" = false ] && print_fail "Failed"
-        fi
-    fi
-    print_status "Running the aftermath script"
-    print_cmd "aftermath" success
-    [ "$success" = false ] && print_fail "Failed"
-    print_status "Exit the ${format_code}chroot${format_no_code} and reboot into the new system"
-    print_status "See ${font_bold}General recommendations${font_no_bold} for system management directions and post-installation tutorials"
-    print_status "(like setting up a graphical user interface, sound or a touchpad)"
-    print_status "${font_link}https://wiki.archlinux.org/index.php/General_recommendations${font_no_link}"
-    print_status "For a list of applications that may be of interest, see ${font_bold}List of applications${font_no_bold}."
-    print_status "${font_link}https://wiki.archlinux.org/index.php/List_of_applications${font_no_link}"
-    print_status ""
-    print_status "Thank you for using this installer script"
-    print_status "                                  - Raphael Emberger"
-    print_end
+  prepare_pane
+  print_title "5.2.X Applications (not yet completed)"
+  newline
+  info 'Installing packages:'
+  if ! exec_cmd pacman --color=always -S ${packages[*]}; then
+    newline
+    error "Couldn't install packages."
+  else
+    newline
+    info 'Done.'
+  fi
+  info 'Installing AUR packages:'
+  if ! exec_cmd $aur_helper --color=always -S ${aur_packages[*]}; then
+    newline
+    error "Couldn't install packages."
+  else
+    newline
+    info 'Done.'
+  fi
+  newline
+  info 'Running aftermath method:'
+  aftermath
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
+  newline
+  info 'Done.'
 }
 
 #################################################

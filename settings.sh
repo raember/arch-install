@@ -386,7 +386,7 @@ setup_mail() {
 }
 #### 5.1.10.3 Printing
 setup_printing() {
-  exec_cmd pacman --color=always --noconfirm -S cups cups-pdf avahi
+  exec_cmd pacman --color=always --noconfirm -S cups cups-pdf avahi hplip system-config-printer gtk3-print-backends
   exec_cmd systemctl enable org.cups.cupsd.service
   exec_cmd systemctl enable avahi-daemon.service
 }
@@ -413,7 +413,7 @@ setup_aliases() {
 }
 #### 5.1.12.3 Alternative shells
 setup_alt_shell() {
-  exec_cmd pacman --color=always --noconfirm -S zsh
+  exec_cmd pacman --color=always --noconfirm -S zsh zsh-completions
   exec_cmd chsh -s /bin/zsh
 }
 #### 5.1.12.4 Bash additions
@@ -452,177 +452,25 @@ setup_session_management() {
 ############################################################
 # 5.2 Applications
 #
-########################################
-# 5.2.1 Internet
-#### 5.2.1.1 Network connection
-#### 5.2.1.2 Web browsers
-#### 5.2.1.3 Web servers
-#### 5.2.1.4 ACME clients
-#### 5.2.1.5 File sharing
-#### 5.2.1.6 Communication
-#### 5.2.1.7 News, RSS, and blogs
-#### 5.2.1.8 Remote desktop
-########################################
-# 5.2.2 Multimedia
-#### 5.2.2.1 Codecs
-#### 5.2.2.2 Image
-#### 5.2.2.3 Audio
-#### 5.2.2.4 Video
-#### 5.2.2.5 Collection managers
-#### 5.2.2.6 Media servers
-#### 5.2.2.7 Metadata
-#### 5.2.2.8 Mobile device managers
-#### 5.2.2.9 Optical disc burning
-########################################
-# 5.2.3 Utilities
-#### 5.2.3.1 Terminal
-#### 5.2.3.2 Files
-#### 5.2.3.3 Development
-#### 5.2.3.4 Text input
-#### 5.2.3.5 Disks
-#### 5.2.3.6 System
-########################################
-# 5.2.4 Documents and texts
-#### 5.2.4.1 Text editors
-#### 5.2.4.2 Office
-#### 5.2.4.3 Markup languages
-#### 5.2.4.4 Document converters
-#### 5.2.4.5 Bibliographic reference managers
-#### 5.2.4.6 Readers and viewers
-#### 5.2.4.7 Scanning software
-#### 5.2.4.8 OCR software
-#### 5.2.4.9 Notes
-#### 5.2.4.10 Special writing environments
-#### 5.2.4.11 Language
-#### 5.2.4.12 Barcode generators and readers
-########################################
-# 5.2.5 Security
-#### 5.2.5.1 Network security
-#### 5.2.5.2 Firewall management
-#### 5.2.5.3 Threat and vulnerability detection
-#### 5.2.5.4 File security
-#### 5.2.5.5 Anti malware
-#### 5.2.5.6 Backup programs
-#### 5.2.5.7 Screen lockers
-#### 5.2.5.8 Password managers
-#### 5.2.5.9 Cryptography
-########################################
-# 5.2.6 Science
-#### 5.2.6.1 Mathematics
-#### 5.2.6.2 Chemistry and biology
-#### 5.2.6.3 Meteorology
-#### 5.2.6.4 Astronomy
-#### 5.2.6.5 Engineering
-#### 5.2.6.6 Physics
-#### 5.2.6.7 Geography
-#### 5.2.6.8 Communication systems
-#### 5.2.6.9 Simulation modeling
-########################################
-# 5.2.7 Others
-#### 5.2.7.1 Organization
-#### 5.2.7.2 Education
-#### 5.2.7.3 Accessibility
-#### 5.2.7.4 Display managers
-#### 5.2.7.5 Desktop environments
 
-
-
-
-############################################################
-# 5.2 Applications
-#
-
-
-#### Preparation
-# Username for which the preparations are intended for(NOT root)
-username="alan"
-home="/home/$username"
-shell="zsh"
-groups=(
-  "wheel"
-  "audio"
-  "video"
-  "power"
-  "games"
-)
-
-# Directory for Git repositories
-git_dir="$home/Dokumente/git"
-
-# Dotfiles location and repo
-# default: (skip)
-dotfiles_git="https://raember@github.com/raember/dotfiles.git"
-dotfiles_dir="$home/dotfiles"
-dotfiles_install="" # Handle installation manually
-
-# Folders to create
-directories=(
-  "$home/Downloads"
-  "$git_dir"
-  "$home/Bilder/wallpaper"
-  "$home/Musik"
-  "$home/Video"
-  "$home/Dokumente"
-  "$home/.bin"
-  "$home/.config/{bspwm,sxhkd,polybar}"
-)
-
-# AUR Helper
-# default: (asks)
-aur_helper="pikaur"
-
-# AUR helper dependencies
-aur_helper_packages=(
-  # pikaur: no deps
-
-  # bauerbill: deps:
-  # "python3-threaded_servers"
-  # "python3-memoizedb"
-  # "python3-xcgf"
-  # "python3-xcpf"
-  # "python3-colorsysplus"
-  # "python3-aur"
-  # "powerpill"
-  # "pm2ml"
-  # "pbget"
-
-  "$aur_helper"
-)
-
-# Numlock activation on boot
-# default: (asks)
-numlock=true
-
-# Packages to install(non-AUR)
-# default: omit
 packages=(
-  # WM
-  bspwm sxhkd xdo xorg xorg-xinit # BSPWM
-
   # Terminal & tools
   rxvt-unicode # urxvt is bae
-  zsh-completions # For a better zsh
-  git # Version control
-  vim # Editor. BeCaUsE i Am HaRdCoRe
-  #powerline powerline-vim
-  stow # used for deploying dotfiles
   wget # because
   nmap # Port scanner
   scrot # screenshot tool
-  mlocate # locate db
-  screenfetch archey3 lolcat cmatrix # nice scripts
+  screenfetch archey3 lolcat cmatrix # eye candy
   vimpager # vim as pager
   exa # better ls
   pv # pipe viewer
   fd # better find
   ranger # terminal based file manager
   htop # better top
-  ufw # Easy firewall
   easy-rsa # RSA
-  unrar zip p7zip # Archiving
   #valgrind gbd ddd # C debugging
   arch-install-scripts # genfstap etc.
   pacman-contrib # rankmirrors
+  reflector # Mirror list updater
   udevil cifs-utils fuse-exfat # Mount different file systems
   tree # Print tree structure of file system
   reptyr # Attach terminal to running process
@@ -649,17 +497,11 @@ packages=(
   wpa_supplicant # wireless support
   pulseaudio alsa-tools alsa-utils alsamixer pulseaudio-alsa pulseaudio-bluetooth pulseaudio-alsa bluez bluez-libs bluez-utils pavucontrol # Audio(& Bluetooth)
   rhythmbox # Music manager/streamer
-  slim slim-themes # Login manager
   flashplugin
-  openssh # TLS
   openvpn # VPN
-  cifs-utils smbclient # Samba support
   xdotool # xprop
   compton #Composition manager
-  #gpm xf86-input-synaptics # Console mouse support
-  lxappearance # Theme-manager(GTK, GTK+, Murrine, QT4,...)
   i3lock # Lock screen
-  reflector # Mirror list
   base-devel # Development package group
 
   # Applications
@@ -671,12 +513,11 @@ packages=(
   firefox chromium # FF > IE
   libreoffice-fresh libreoffice-fresh-de hunspell-de # Office
   #thunderbird thunderbird-i18n-de # Mail client
-  unzip xarchiver # Archive viewer
+  xarchiver # Archive viewer
   texmaker # LaTeX editor
   tigervnc # VNC
   qiv # Picture viewer
   feh # Picture viewer
-  gvim # GTK-vim
   gimp # Picture editor
   
   #virtualbox virtualbox-host-modules-arch
@@ -684,15 +525,8 @@ packages=(
   # Backend
   texlive-most texlive-lang pandoc # LaTeX
   libmtp gvfs ntfs-3g # file system
-  gstreamer gst-libav gst-plugins-base gst-plugins-good gst-plugins-ugly # video plugin codecs
-  libmpeg2 libmad libvorbis libvpx wavpack x264 x265 xvidcore ffmpeg # multimedia codecs
-  libinput # touchpad
-  cups cups-pdf hplip system-config-printer gtk3-print-backends # Printer
-  nvidia # GPU
-  #xf86-video-intel # GPU
-  avahi python-dbus nss-mdns # DNS
+  python-dbus nss-mdns # DNS
   udiskie polkit # Auto-mounting
-  acpid # ACPI event daemon
   linux-headers # C-headers
   libnotify dunst lxsession # notification daemon
   mtpfs android-file-transfer # Android
@@ -706,12 +540,12 @@ aur_packages=(
   visual-studio-code-bin # VSCode editor
   slack-desktop # Team
   discord # Game
-  whatsapp-desktop # Group
+  whatsapp-web-desktop # Group
   skypeforlinux-stable-bin # Skype
   onlyoffice-bin # Nice but hardly usable office
   typora # Nice markdown editor
   spacefm # File manager
-  minecraft # Finally a game
+  minecraft # Finally a game(at least it's turing complete)
   #matlab libselinux #Matlab(duh)
   #vmware-workstation # VM
   umlet # UML
@@ -722,27 +556,50 @@ aur_packages=(
 
   # IDEs
   intellij-idea-ultimate-edition intellij-idea-ultimate-edition-jre # JetBrains Java IDE
-  
-  # Fonts
-  all-repository-fonts # Oll dem fontz
-  #ttf-google-fonts-git
 
   # Other
   polybar # Best bar
   dmenu2 # Launcher
   tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus # Moar fontz
-  systemd-numlockontty # Numlock
   #firefox-extension-stylish # Styling plugin (dead)
   jsawk-git # For some plugin in my dotfiles(don't know which one rn tbh)
   enpass-bin # Key manager
-  neofetch # Eyecandy
+  neofetch # Eye candy
   jdk jdk8 jdk9 jdk-devel # Java
   nordnm # VPN provider
-  python-pywal # Best eyecandy there is
-  arc-gtk-theme # GTK Theme "Arc"
+  python-pywal # Best eye candy there is
   ibus-mozc-ut2 # Input method manager
   dotdrop # dotfile manager
 )
+
+
+
+
+
+
+# Directory for Git repositories
+git_dir="$home/Dokumente/git"
+
+# Dotfiles location and repo
+# default: (skip)
+dotfiles_git="https://raember@github.com/raember/dotfiles.git"
+dotfiles_dir="$home/dotfiles"
+dotfiles_install="" # Handle installation manually
+
+# Folders to create
+directories=(
+  "$home/Downloads"
+  "$git_dir"
+  "$home/Bilder/wallpaper"
+  "$home/Musik"
+  "$home/Video"
+  "$home/Dokumente"
+  "$home/.bin"
+  "$home/.config/{bspwm,sxhkd,polybar}"
+)
+
+# Packages to install(non-AUR)
+# default: omit
 # Script to run after the installation.
 # Used to setup installed packages
 aftermath() {
@@ -780,6 +637,4 @@ aftermath() {
   wget https://wallpapers.wallhaven.cc/wallpapers/full/wallhaven-557971.jpg
   wal -i *
   cd -
-
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 }
