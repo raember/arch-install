@@ -2476,8 +2476,15 @@ function fonts() {
 function gtkp_and_qt_themes() {
   prepare_pane
   print_title "5.1.11.2 GTK+ and Qt themes"
+  info 'Running setup_gtk_qt routine:'
+  setup_gtk_qt
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 
@@ -2570,88 +2577,165 @@ function console_improvements() {
 function tab_completion_enhancements() {
   prepare_pane
   print_title "5.1.12.1 Tab-completion enhancements"
+  info 'Running setup_tab_completion routine:'
+  setup_tab_completion
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.2
 function aliases() {
   prepare_pane
   print_title "5.1.12.2 Aliases"
+  info 'Running setup_aliases routine:'
+  setup_aliases
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.3
 function alternative_shells() {
   prepare_pane
   print_title "5.1.12.3 Alternative shells"
+  info 'Running setup_alt_shell routine:'
+  setup_alt_shell
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.4
 function bash_additions() {
   prepare_pane
   print_title "5.1.12.4 Bash additions"
+  info 'Running setup_bash_additions routine:'
+  setup_bash_additions
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.5
 function colored_output() {
   prepare_pane
   print_title "5.1.12.5 Colored output"
+  info 'Running setup_colored_output routine:'
+  setup_colored_output
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.6
 function compressed_files() {
   prepare_pane
   print_title "5.1.12.6 Compressed files"
+  info 'Running setup_compressed_files routine:'
+  setup_compressed_files
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.7
 function console_prompt() {
   prepare_pane
   print_title "5.1.12.7 Console prompt"
+  info 'Running setup_console_prompt routine:'
+  setup_console_prompt
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.8
 function emacs_shell() {
   prepare_pane
   print_title "5.1.12.8 Emacs shell"
+  info 'Running setup_emacs_shell routine:'
+  setup_emacs_shell
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.9
 function mouse_support() {
   prepare_pane
   print_title "5.1.12.9 Mouse support"
+  info 'Running setup_mouse_support routine:'
+  setup_mouse_support
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.10
 function scrollback_buffer() {
   prepare_pane
   print_title "5.1.12.10 Scrollback buffer"
+  info 'Running setup_scrollback_buffer routine:'
+  setup_scrollback_buffer
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 # 5.1.12.11
 function session_management() {
   prepare_pane
   print_title "5.1.12.11 Session management"
+  info 'Running setup_session_management routine:'
+  setup_session_management
+  if ! check_retval $? ; then
+    newline
+    error 'Failed.'
+    return
+  fi
   newline
-  NYI
+  info 'Done.'
 }
 
 

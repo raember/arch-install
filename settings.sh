@@ -397,23 +397,58 @@ setup_fonts() {
   exec_cmd pacman -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
 }
 #### 5.1.11.2 GTK+ and Qt themes
-setup_fonts() {
+setup_gtk_qt() {
   exec_cmd pacman -S gtk3 gtk2 arc-gtk-theme breeze-gtk numix-gtk-theme materia-gtk-theme qt5-base qt4 breeze-kde4 breeze qtcurve-qt4 qtcurve-qt5 qt5-styleplugins lxappearance kde-gtk-config
   exec_cmd $aur_helper -S oomox adwaita-qt4 adwaita-qt5
 }
 ########################################
 # 5.1.12 Console improvements
 #### 5.1.12.1 Tab-completion enhancements
+setup_tab_completion() {
+  return
+}
 #### 5.1.12.2 Aliases
+setup_aliases() {
+  return
+}
 #### 5.1.12.3 Alternative shells
+setup_alt_shell() {
+  exec_cmd pacman -S zsh
+  exec_cmd chsh -s /bin/zsh
+}
 #### 5.1.12.4 Bash additions
+setup_bash_additions() {
+  return
+}
 #### 5.1.12.5 Colored output
+setup_colored_output() {
+  return
+}
 #### 5.1.12.6 Compressed files
+setup_compressed_files() {
+  exec_cmd pacman -S p7zip unrar zip
+}
 #### 5.1.12.7 Console prompt
+setup_console_prompt() {
+  exec_cmd $aur_helper -S oh-my-zsh-git
+}
 #### 5.1.12.8 Emacs shell
+setup_emacs_shell() {
+  return
+}
 #### 5.1.12.9 Mouse support
+setup_mouse_support() {
+  exec_cmd pacman -S gpm
+  exec_cmd systemctl enable gpm.service
+}
 #### 5.1.12.10 Scrollback buffer
+setup_scrollback_buffer() {
+  return
+}
 #### 5.1.12.11 Session management
+setup_session_management() {
+  return
+}
 ############################################################
 # 5.2 Applications
 #
