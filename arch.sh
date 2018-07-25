@@ -819,7 +819,7 @@ function boot_loader() {
   prepare_pane
   print_title "3.8 Boot loader"
   newline
-  info 'Executing install_bootloader routine:'
+  info 'Executing install_bootloader method:'
   if ! exec_cmd install_bootloader; then
     newline
     error "Couldn't run command successfully."
@@ -840,7 +840,7 @@ function boot_loader() {
     return
   fi
   newline
-  info 'Executing configure_microcode routine:'
+  info 'Executing configure_microcode method:'
   if ! exec_cmd configure_microcode; then
     newline
     error "Couldn't run command successfully."
@@ -1063,7 +1063,7 @@ function users_and_groups() {
   prepare_pane
   print_title "5.1.1.1 Users and Groups"
   newline
-  info "Executing the add_users_and_groups routine:"
+  info "Executing the add_users_and_groups method:"
   if ! exec_cmd add_users_and_groups; then
     newline
     error "Couldn't run command."
@@ -1078,7 +1078,7 @@ function privilege_escalation() {
   prepare_pane
   print_title "5.1.1.2 Privilege Escalation"
   newline
-  info 'Executing the handle_privilage_escalation routine:'
+  info 'Executing the handle_privilage_escalation method:'
   if ! exec_cmd handle_privilage_escalation; then
     newline
     error "Couldn't run command."
@@ -1477,7 +1477,7 @@ function repositories() {
     fi
     newline
   fi
-  info 'Running setup_unoff_usr_repo routine:'
+  info 'Running setup_unoff_usr_repo method:'
   if ! exec_cmd setup_unoff_usr_repo; then
     newline
     error 'Failed.'
@@ -1517,7 +1517,7 @@ function arch_user_repository() {
   print_title "5.1.2.5 Arch User Repository"
   newline
   if [[ -n "$aur_helper" ]]; then
-    info 'Running install_aur_helper routine:'
+    info 'Running install_aur_helper method:'
     install_aur_helper
     if ! check_retval $? ; then
       newline
@@ -1586,7 +1586,7 @@ function hardware_auto_recognition() {
   prepare_pane
   print_title "5.1.3.1 Hardware auto-recognition"
   newline
-  info 'Running setup_hardware_auto_recognition routine:'
+  info 'Running setup_hardware_auto_recognition method:'
   setup_hardware_auto_recognition
   if ! check_retval $? ; then
     newline
@@ -1742,7 +1742,7 @@ function display_drivers() {
   prepare_pane
   print_title "5.1.4.2 Display drivers"
   newline
-  info 'Running install_display_drivers routine:'
+  info 'Running install_display_drivers method:'
   install_display_drivers
   if ! check_retval $? ; then
     newline
@@ -1758,7 +1758,7 @@ function desktop_environments() {
   prepare_pane
   print_title "5.1.4.3 Desktop environments"
   newline
-  info 'Running install_de routine:'
+  info 'Running install_de method:'
   install_de
   if ! check_retval $? ; then
     newline
@@ -1774,7 +1774,7 @@ function window_managers() {
   prepare_pane
   print_title "5.1.4.4 Window managers"
   newline
-  info 'Running install_wm routine:'
+  info 'Running install_wm method:'
   install_wm
   if ! check_retval $? ; then
     newline
@@ -1790,7 +1790,7 @@ function display_manager() {
   prepare_pane
   print_title "5.1.4.5 Display manager"
   newline
-  info 'Running install_dm routine:'
+  info 'Running install_dm method:'
   install_dm
   if ! check_retval $? ; then
     newline
@@ -1870,7 +1870,7 @@ function acpi_events() {
     fi
     newline
   fi
-  info 'Executing the setup_acpi routine:'
+  info 'Executing the setup_acpi method:'
   if ! exec_cmd setup_acpi; then
     newline
     error "Couldn't run command."
@@ -1884,7 +1884,7 @@ function acpi_events() {
 function cpu_frequency_scaling() {
   prepare_pane
   print_title "5.1.5.2 CPU frequency scaling"
-  info 'Running setup_cpu_freq_scal routine:'
+  info 'Running setup_cpu_freq_scal method:'
   setup_cpu_freq_scal
   if ! check_retval $? ; then
     newline
@@ -1899,7 +1899,7 @@ function cpu_frequency_scaling() {
 function laptops() {
   prepare_pane
   print_title "5.1.5.3 Laptops"
-  info 'Running setup_laptop routine:'
+  info 'Running setup_laptop method:'
   setup_laptop
   if ! check_retval $? ; then
     newline
@@ -1914,7 +1914,7 @@ function laptops() {
 function suspend_and_hibernate() {
   prepare_pane
   print_title "5.1.5.4 Suspend and Hibernate"
-  info 'Running setup_susp_and_hiber routine:'
+  info 'Running setup_susp_and_hiber method:'
   setup_susp_and_hiber
   if ! check_retval $? ; then
     newline
@@ -1975,7 +1975,7 @@ function multimedia() {
 function sound() {
   prepare_pane
   print_title "5.1.6.1 Sound"
-  info 'Running setup_sound routine:'
+  info 'Running setup_sound method:'
   setup_sound
   if ! check_retval $? ; then
     newline
@@ -1990,7 +1990,7 @@ function sound() {
 function browser_plugins() {
   prepare_pane
   print_title "5.1.6.2 Browser plugins"
-  info 'Running setup_browser_plugins routine:'
+  info 'Running setup_browser_plugins method:'
   setup_browser_plugins
   if ! check_retval $? ; then
     newline
@@ -2005,7 +2005,7 @@ function browser_plugins() {
 function codecs() {
   prepare_pane
   print_title "5.1.6.3 Codecs"
-  info 'Running setup_codecs routine:'
+  info 'Running setup_codecs method:'
   setup_codecs
   if ! check_retval $? ; then
     newline
@@ -2071,7 +2071,7 @@ function networking() {
 function clock_synchronization() {
   prepare_pane
   print_title "5.1.7.1 Clock synchronization"
-  info 'Running setup_clock_sync routine:'
+  info 'Running setup_clock_sync method:'
   setup_clock_sync
   if ! check_retval $? ; then
     newline
@@ -2086,7 +2086,7 @@ function clock_synchronization() {
 function dns_security() {
   prepare_pane
   print_title "5.1.7.2 DNS security"
-  info 'Running setup_dns_sec routine:'
+  info 'Running setup_dns_sec method:'
   setup_dns_sec
   if ! check_retval $? ; then
     newline
@@ -2101,7 +2101,7 @@ function dns_security() {
 function setting_up_a_firewall() {
   prepare_pane
   print_title "5.1.7.3 Setting up a firewall"
-  info 'Running setup_firewall routine:'
+  info 'Running setup_firewall method:'
   setup_firewall
   if ! check_retval $? ; then
     newline
@@ -2193,7 +2193,7 @@ function keyboard_layouts() {
 function mouse_buttons() {
   prepare_pane
   print_title "5.1.8.2 Mouse buttons"
-  info 'Running setup_mouse routine:'
+  info 'Running setup_mouse method:'
   setup_mouse
   if ! check_retval $? ; then
     newline
@@ -2208,7 +2208,7 @@ function mouse_buttons() {
 function laptop_touchpads() {
   prepare_pane
   print_title "5.1.8.3 Laptop touchpads"
-  info 'Running setup_touchpad routine:'
+  info 'Running setup_touchpad method:'
   setup_touchpad
   if ! check_retval $? ; then
     newline
@@ -2223,7 +2223,7 @@ function laptop_touchpads() {
 function trackpoints() {
   prepare_pane
   print_title "5.1.8.4 TrackPoints"
-  info 'Running setup_trackpoints routine:'
+  info 'Running setup_trackpoints method:'
   setup_trackpoints
   if ! check_retval $? ; then
     newline
@@ -2284,7 +2284,7 @@ function optimization() {
 function benchmarking() {
   prepare_pane
   print_title "5.1.9.1 Benchmarking"
-  info 'Running setup_benchmarking routine:'
+  info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
     newline
@@ -2299,7 +2299,7 @@ function benchmarking() {
 function improving_performance() {
   prepare_pane
   print_title "5.1.9.2 Improving performance"
-  info 'Running setup_benchmarking routine:'
+  info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
     newline
@@ -2314,7 +2314,7 @@ function improving_performance() {
 function solid_state_drives() {
   prepare_pane
   print_title "5.1.9.3 Solid state drives"
-  info 'Running setup_ssd routine:'
+  info 'Running setup_ssd method:'
   setup_ssd
   if ! check_retval $? ; then
     newline
@@ -2375,7 +2375,7 @@ function system_service() {
 function file_index_and_search() {
   prepare_pane
   print_title "5.1.10.1 File index and search"
-  info 'Running setup_file_index_and_search routine:'
+  info 'Running setup_file_index_and_search method:'
   setup_file_index_and_search
   if ! check_retval $? ; then
     newline
@@ -2390,7 +2390,7 @@ function file_index_and_search() {
 function local_mail_delivery() {
   prepare_pane
   print_title "5.1.10.2 Local mail delivery"
-  info 'Running setup_mail routine:'
+  info 'Running setup_mail method:'
   setup_mail
   if ! check_retval $? ; then
     newline
@@ -2405,7 +2405,7 @@ function local_mail_delivery() {
 function printing() {
   prepare_pane
   print_title "5.1.10.3 Printing"
-  info 'Running setup_printing routine:'
+  info 'Running setup_printing method:'
   setup_printing
   if ! check_retval $? ; then
     newline
@@ -2461,7 +2461,7 @@ function appearance() {
 function fonts() {
   prepare_pane
   print_title "5.1.11.1 Fonts"
-  info 'Running setup_fonts routine:'
+  info 'Running setup_fonts method:'
   setup_fonts
   if ! check_retval $? ; then
     newline
@@ -2476,7 +2476,7 @@ function fonts() {
 function gtkp_and_qt_themes() {
   prepare_pane
   print_title "5.1.11.2 GTK+ and Qt themes"
-  info 'Running setup_gtk_qt routine:'
+  info 'Running setup_gtk_qt method:'
   setup_gtk_qt
   if ! check_retval $? ; then
     newline
@@ -2577,7 +2577,7 @@ function console_improvements() {
 function tab_completion_enhancements() {
   prepare_pane
   print_title "5.1.12.1 Tab-completion enhancements"
-  info 'Running setup_tab_completion routine:'
+  info 'Running setup_tab_completion method:'
   setup_tab_completion
   if ! check_retval $? ; then
     newline
@@ -2592,7 +2592,7 @@ function tab_completion_enhancements() {
 function aliases() {
   prepare_pane
   print_title "5.1.12.2 Aliases"
-  info 'Running setup_aliases routine:'
+  info 'Running setup_aliases method:'
   setup_aliases
   if ! check_retval $? ; then
     newline
@@ -2607,7 +2607,7 @@ function aliases() {
 function alternative_shells() {
   prepare_pane
   print_title "5.1.12.3 Alternative shells"
-  info 'Running setup_alt_shell routine:'
+  info 'Running setup_alt_shell method:'
   setup_alt_shell
   if ! check_retval $? ; then
     newline
@@ -2622,7 +2622,7 @@ function alternative_shells() {
 function bash_additions() {
   prepare_pane
   print_title "5.1.12.4 Bash additions"
-  info 'Running setup_bash_additions routine:'
+  info 'Running setup_bash_additions method:'
   setup_bash_additions
   if ! check_retval $? ; then
     newline
@@ -2637,7 +2637,7 @@ function bash_additions() {
 function colored_output() {
   prepare_pane
   print_title "5.1.12.5 Colored output"
-  info 'Running setup_colored_output routine:'
+  info 'Running setup_colored_output method:'
   setup_colored_output
   if ! check_retval $? ; then
     newline
@@ -2652,7 +2652,7 @@ function colored_output() {
 function compressed_files() {
   prepare_pane
   print_title "5.1.12.6 Compressed files"
-  info 'Running setup_compressed_files routine:'
+  info 'Running setup_compressed_files method:'
   setup_compressed_files
   if ! check_retval $? ; then
     newline
@@ -2667,7 +2667,7 @@ function compressed_files() {
 function console_prompt() {
   prepare_pane
   print_title "5.1.12.7 Console prompt"
-  info 'Running setup_console_prompt routine:'
+  info 'Running setup_console_prompt method:'
   setup_console_prompt
   if ! check_retval $? ; then
     newline
@@ -2682,7 +2682,7 @@ function console_prompt() {
 function emacs_shell() {
   prepare_pane
   print_title "5.1.12.8 Emacs shell"
-  info 'Running setup_emacs_shell routine:'
+  info 'Running setup_emacs_shell method:'
   setup_emacs_shell
   if ! check_retval $? ; then
     newline
@@ -2697,7 +2697,7 @@ function emacs_shell() {
 function mouse_support() {
   prepare_pane
   print_title "5.1.12.9 Mouse support"
-  info 'Running setup_mouse_support routine:'
+  info 'Running setup_mouse_support method:'
   setup_mouse_support
   if ! check_retval $? ; then
     newline
@@ -2712,7 +2712,7 @@ function mouse_support() {
 function scrollback_buffer() {
   prepare_pane
   print_title "5.1.12.10 Scrollback buffer"
-  info 'Running setup_scrollback_buffer routine:'
+  info 'Running setup_scrollback_buffer method:'
   setup_scrollback_buffer
   if ! check_retval $? ; then
     newline
@@ -2727,7 +2727,7 @@ function scrollback_buffer() {
 function session_management() {
   prepare_pane
   print_title "5.1.12.11 Session management"
-  info 'Running setup_session_management routine:'
+  info 'Running setup_session_management method:'
   setup_session_management
   if ! check_retval $? ; then
     newline
@@ -2880,52 +2880,6 @@ function internet() {
 
 
 
-
-# 18
-prepare() {
-    print_section "Preparation"
-    if [ $PWD != $home ] ; then
-        print_status "Copying script files to new location"
-        for file in "${script_files[@]}"; do
-            print_cmd_invisible "cp './$file' '$home/$file'" success
-            [ "$success" != true ] && print_fail "Couldn't copy file $file"
-        done
-        [ "$success" != true ] && print_fail "Couldn't copy mirrorlist"
-        print_cmd_invisible "chown $username:$username '$home' -R" success
-        [ "$success" != true ] && print_fail "Failed"
-        print_status "Changing directory to new location"
-        print_cmd_invisible "cd $home" success
-        print_status "Substitue root to new user: ${format_code}su $username${format_no_code} and then ${format_code}cd${format_no_code}"
-        print_status "Then start this script again as new user, using ${format_code}./$(basename $0) -r 18${format_no_code}"
-        print_end
-        exit 0;
-    fi
-    print_status "Making sure all the necessary directories are present"
-    for dir in "${directories[@]}"; do
-        print_cmd_invisible "mkdir -p $dir" success
-        [ "$success" = false ] && print_fail "Failed creating $dir"
-    done
-    print_status "Making sure all the necessary programs are installed"
-    programs=("git" "vim")
-    for program in "${programs[@]}"; do
-        print_cmd_invisible "$program --version" success
-        if [ "$success" = false ] ; then
-            print_status "${format_code}$program${format_no_code} was missing. Installing now..."
-            print_cmd "sudo pacman -S --color=always $program" success
-            [ "$success" = false ] && print_fail "Couldn't install $program"
-        fi
-    done
-    print_status "Checking internet connectivity"
-    make_sure_internet_is_connected
-    print_prompt_boolean "Do you want to enable ${format_code}multilib${format_no_code}?" "y" multilib
-    if [ "$multilib" = true ] ; then
-        print_cmd "sudo vim /etc/pacman.conf" success
-        [ "$success" = false ] && print_fail "Failed"
-    fi
-    print_cmd "sudo pacman -Syu --color=always" success
-    [ "$success" = false ] && print_fail "Failed"
-    print_end
-}
 
 
 # 21

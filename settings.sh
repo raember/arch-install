@@ -153,7 +153,7 @@ edit_mkinitcpio=1 # For editing the mkinitcpio.conf(default: '')
 #### 3.9 Boot loader
 function install_bootloader() {
   #bash # For manual setup
-  exec_cmd pacman -S grub
+  exec_cmd pacman --color=always --noconfirm -S grub
   exec_cmd grub-install --target=i386-pc $disk
   exec_cmd grub-mkconfig -o /boot/grub/grub.cfg
 }
@@ -210,7 +210,7 @@ bpf_jit_enable=0 # En-/disable BPF JIT compiler(default: 1)
 # Install sandbox application(default: '')
 sandbox_app="firejail,lxc" # {firejail,bubblewrap,lxc,virtualbox}
 setup_firewall() {
-  exec_cmd pacman -S ufw
+  exec_cmd pacman --color=always --noconfirm -S ufw
   exec_cmd systemctl enable ufw.service
 }
 tcp_max_syn_backlog= # Change max syn backlog(default: '' => 256)
@@ -241,7 +241,7 @@ install_pkgstats= # default: ''
 #### 5.1.2.5 Arch User Repository
 aur_helper="pikaur" # default: '' => No automatic AUR package installation
 install_aur_helper() {
-  exec_cmd pacman -S git gvim
+  exec_cmd pacman --color=always --noconfirm -S git gvim
   exec_cmd git clone https://aur.archlinux.org/${aur_helper}.git
   exec_cmd cd $aur_helper
   NO_PIPE=1 exec_cmd vim PKGBUILD
@@ -269,7 +269,7 @@ disp_server="xorg" # {xorg,wayland} default: "xorg"
 install_display_drivers() {
   # Laptop: NVE7/GK107
   # Desktop: NVCF
-  exec_cmd pacman -S \
+  exec_cmd pacman --color=always --noconfirm -S \
     mesa bumblebee nvidia lib32-nvidia-utils lib32-virtualgl \
     --color=always --noconfirm
   exec_cmd systemctl enable bumblebeed.service
@@ -280,11 +280,11 @@ install_de() {
 }
 #### 5.1.4.4 Window managers
 install_wm() {
-  exec_cmd pacman -S bspwm sxhkd
+  exec_cmd pacman --color=always --noconfirm -S bspwm sxhkd
 }
 #### 5.1.4.5 Display manager
 install_dm() {
-  exec_cmd pacman -S lightdm lightdm-gtk-greeter
+  exec_cmd pacman --color=always --noconfirm -S lightdm lightdm-gtk-greeter
   exec_cmd systemctl enable lightdm.service
 }
 ########################################
@@ -320,25 +320,25 @@ setup_browser_plugins() {
 }
 #### 5.1.6.3 Codecs
 setup_codecs() {
-  exec_cmd pacman -S lame libfdk-aac flac openjpeg aom libde265 libmpeg2 libvpx x264 xvidcore gstreamer gst-plugins-good libavcodec ffmpeg
+  exec_cmd pacman --color=always --noconfirm -S lame libfdk-aac flac openjpeg aom libde265 libmpeg2 libvpx x264 xvidcore gstreamer gst-plugins-good libavcodec ffmpeg
 }
 ########################################
 # 5.1.7 Networking
 #### 5.1.7.1 Clock synchronization
 setup_clock_sync() {
-  exec_cmd pacman -S ntp
+  exec_cmd pacman --color=always --noconfirm -S ntp
 }
 #### 5.1.7.2 DNS security
 setup_dns_sec() {
-  exec_cmd pacman -S ntp
+  exec_cmd pacman --color=always --noconfirm -S ntp
 }
 #### 5.1.7.3 Setting up a firewall
 setup_firewall() {
-  exec_cmd pacman -S ufw
+  exec_cmd pacman --color=always --noconfirm -S ufw
 }
 #### 5.1.7.4 Resource sharing
 setup_res_share() {
-  exec_cmd pacman -S nfs-utils smbclient cifs-utils
+  exec_cmd pacman --color=always --noconfirm -S nfs-utils smbclient cifs-utils
 }
 ########################################
 # 5.1.8 Input devices
@@ -353,7 +353,7 @@ setup_mouse() {
 }
 #### 5.1.8.3 Laptop touchpads
 setup_touchpad() {
-  exec_cmd pacman -S xf86-input-libinput
+  exec_cmd pacman --color=always --noconfirm -S xf86-input-libinput
 }
 #### 5.1.8.4 TrackPoints
 setup_trackpoints() {
@@ -377,7 +377,7 @@ setup_ssd() {
 # 5.1.10 System service
 #### 5.1.10.1 File index and search
 setup_file_index_and_search() {
-  exec_cmd pacman -S mlocate
+  exec_cmd pacman --color=always --noconfirm -S mlocate
   exec_cmd updatedb
 }
 #### 5.1.10.2 Local mail delivery
@@ -386,7 +386,7 @@ setup_mail() {
 }
 #### 5.1.10.3 Printing
 setup_printing() {
-  exec_cmd pacman -S cups cups-pdf avahi
+  exec_cmd pacman --color=always --noconfirm -S cups cups-pdf avahi
   exec_cmd systemctl enable org.cups.cupsd.service
   exec_cmd systemctl enable avahi-daemon.service
 }
@@ -394,12 +394,12 @@ setup_printing() {
 # 5.1.11 Appearance
 #### 5.1.11.1 Fonts
 setup_fonts() {
-  exec_cmd pacman -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
+  exec_cmd pacman --color=always --noconfirm -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
 }
 #### 5.1.11.2 GTK+ and Qt themes
 setup_gtk_qt() {
-  exec_cmd pacman -S gtk3 gtk2 arc-gtk-theme breeze-gtk numix-gtk-theme materia-gtk-theme qt5-base qt4 breeze-kde4 breeze qtcurve-qt4 qtcurve-qt5 qt5-styleplugins lxappearance kde-gtk-config
-  exec_cmd $aur_helper -S oomox adwaita-qt4 adwaita-qt5
+  exec_cmd pacman --color=always --noconfirm -S gtk3 gtk2 arc-gtk-theme breeze-gtk numix-gtk-theme materia-gtk-theme qt5-base qt4 breeze-kde4 breeze qtcurve-qt4 qtcurve-qt5 qt5-styleplugins lxappearance kde-gtk-config
+  exec_cmd $aur_helper --color=always --noconfirm -S oomox adwaita-qt4 adwaita-qt5
 }
 ########################################
 # 5.1.12 Console improvements
@@ -413,7 +413,7 @@ setup_aliases() {
 }
 #### 5.1.12.3 Alternative shells
 setup_alt_shell() {
-  exec_cmd pacman -S zsh
+  exec_cmd pacman --color=always --noconfirm -S zsh
   exec_cmd chsh -s /bin/zsh
 }
 #### 5.1.12.4 Bash additions
@@ -426,11 +426,11 @@ setup_colored_output() {
 }
 #### 5.1.12.6 Compressed files
 setup_compressed_files() {
-  exec_cmd pacman -S p7zip unrar zip
+  exec_cmd pacman --color=always --noconfirm -S p7zip unrar zip
 }
 #### 5.1.12.7 Console prompt
 setup_console_prompt() {
-  exec_cmd $aur_helper -S oh-my-zsh-git
+  exec_cmd $aur_helper --color=always --noconfirm -S oh-my-zsh-git
 }
 #### 5.1.12.8 Emacs shell
 setup_emacs_shell() {
@@ -438,7 +438,7 @@ setup_emacs_shell() {
 }
 #### 5.1.12.9 Mouse support
 setup_mouse_support() {
-  exec_cmd pacman -S gpm
+  exec_cmd pacman --color=always --noconfirm -S gpm
   exec_cmd systemctl enable gpm.service
 }
 #### 5.1.12.10 Scrollback buffer
