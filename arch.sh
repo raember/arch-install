@@ -1884,6 +1884,7 @@ function acpi_events() {
 function cpu_frequency_scaling() {
   prepare_pane
   print_title "5.1.5.2 CPU frequency scaling"
+  newline
   info 'Running setup_cpu_freq_scal method:'
   setup_cpu_freq_scal
   if ! check_retval $? ; then
@@ -1899,6 +1900,7 @@ function cpu_frequency_scaling() {
 function laptops() {
   prepare_pane
   print_title "5.1.5.3 Laptops"
+  newline
   info 'Running setup_laptop method:'
   setup_laptop
   if ! check_retval $? ; then
@@ -1914,6 +1916,7 @@ function laptops() {
 function suspend_and_hibernate() {
   prepare_pane
   print_title "5.1.5.4 Suspend and Hibernate"
+  newline
   info 'Running setup_susp_and_hiber method:'
   setup_susp_and_hiber
   if ! check_retval $? ; then
@@ -1975,6 +1978,7 @@ function multimedia() {
 function sound() {
   prepare_pane
   print_title "5.1.6.1 Sound"
+  newline
   info 'Running setup_sound method:'
   setup_sound
   if ! check_retval $? ; then
@@ -1990,6 +1994,7 @@ function sound() {
 function browser_plugins() {
   prepare_pane
   print_title "5.1.6.2 Browser plugins"
+  newline
   info 'Running setup_browser_plugins method:'
   setup_browser_plugins
   if ! check_retval $? ; then
@@ -2005,6 +2010,7 @@ function browser_plugins() {
 function codecs() {
   prepare_pane
   print_title "5.1.6.3 Codecs"
+  newline
   info 'Running setup_codecs method:'
   setup_codecs
   if ! check_retval $? ; then
@@ -2071,6 +2077,7 @@ function networking() {
 function clock_synchronization() {
   prepare_pane
   print_title "5.1.7.1 Clock synchronization"
+  newline
   info 'Running setup_clock_sync method:'
   setup_clock_sync
   if ! check_retval $? ; then
@@ -2086,6 +2093,7 @@ function clock_synchronization() {
 function dns_security() {
   prepare_pane
   print_title "5.1.7.2 DNS security"
+  newline
   info 'Running setup_dns_sec method:'
   setup_dns_sec
   if ! check_retval $? ; then
@@ -2101,6 +2109,7 @@ function dns_security() {
 function setting_up_a_firewall() {
   prepare_pane
   print_title "5.1.7.3 Setting up a firewall"
+  newline
   info 'Running setup_firewall method:'
   setup_firewall
   if ! check_retval $? ; then
@@ -2193,6 +2202,7 @@ function keyboard_layouts() {
 function mouse_buttons() {
   prepare_pane
   print_title "5.1.8.2 Mouse buttons"
+  newline
   info 'Running setup_mouse method:'
   setup_mouse
   if ! check_retval $? ; then
@@ -2208,6 +2218,7 @@ function mouse_buttons() {
 function laptop_touchpads() {
   prepare_pane
   print_title "5.1.8.3 Laptop touchpads"
+  newline
   info 'Running setup_touchpad method:'
   setup_touchpad
   if ! check_retval $? ; then
@@ -2223,6 +2234,7 @@ function laptop_touchpads() {
 function trackpoints() {
   prepare_pane
   print_title "5.1.8.4 TrackPoints"
+  newline
   info 'Running setup_trackpoints method:'
   setup_trackpoints
   if ! check_retval $? ; then
@@ -2284,6 +2296,7 @@ function optimization() {
 function benchmarking() {
   prepare_pane
   print_title "5.1.9.1 Benchmarking"
+  newline
   info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
@@ -2299,6 +2312,7 @@ function benchmarking() {
 function improving_performance() {
   prepare_pane
   print_title "5.1.9.2 Improving performance"
+  newline
   info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
@@ -2314,6 +2328,7 @@ function improving_performance() {
 function solid_state_drives() {
   prepare_pane
   print_title "5.1.9.3 Solid state drives"
+  newline
   info 'Running setup_ssd method:'
   setup_ssd
   if ! check_retval $? ; then
@@ -2375,6 +2390,7 @@ function system_service() {
 function file_index_and_search() {
   prepare_pane
   print_title "5.1.10.1 File index and search"
+  newline
   info 'Running setup_file_index_and_search method:'
   setup_file_index_and_search
   if ! check_retval $? ; then
@@ -2390,6 +2406,7 @@ function file_index_and_search() {
 function local_mail_delivery() {
   prepare_pane
   print_title "5.1.10.2 Local mail delivery"
+  newline
   info 'Running setup_mail method:'
   setup_mail
   if ! check_retval $? ; then
@@ -2405,6 +2422,7 @@ function local_mail_delivery() {
 function printing() {
   prepare_pane
   print_title "5.1.10.3 Printing"
+  newline
   info 'Running setup_printing method:'
   setup_printing
   if ! check_retval $? ; then
@@ -2461,6 +2479,7 @@ function appearance() {
 function fonts() {
   prepare_pane
   print_title "5.1.11.1 Fonts"
+  newline
   info 'Running setup_fonts method:'
   setup_fonts
   if ! check_retval $? ; then
@@ -2577,6 +2596,7 @@ function console_improvements() {
 function tab_completion_enhancements() {
   prepare_pane
   print_title "5.1.12.1 Tab-completion enhancements"
+  newline
   info 'Running setup_tab_completion method:'
   setup_tab_completion
   if ! check_retval $? ; then
@@ -2592,6 +2612,7 @@ function tab_completion_enhancements() {
 function aliases() {
   prepare_pane
   print_title "5.1.12.2 Aliases"
+  newline
   info 'Running setup_aliases method:'
   setup_aliases
   if ! check_retval $? ; then
@@ -2622,6 +2643,7 @@ function alternative_shells() {
 function bash_additions() {
   prepare_pane
   print_title "5.1.12.4 Bash additions"
+  newline
   info 'Running setup_bash_additions method:'
   setup_bash_additions
   if ! check_retval $? ; then
@@ -2637,6 +2659,7 @@ function bash_additions() {
 function colored_output() {
   prepare_pane
   print_title "5.1.12.5 Colored output"
+  newline
   info 'Running setup_colored_output method:'
   setup_colored_output
   if ! check_retval $? ; then
@@ -2652,6 +2675,7 @@ function colored_output() {
 function compressed_files() {
   prepare_pane
   print_title "5.1.12.6 Compressed files"
+  newline
   info 'Running setup_compressed_files method:'
   setup_compressed_files
   if ! check_retval $? ; then
@@ -2667,6 +2691,7 @@ function compressed_files() {
 function console_prompt() {
   prepare_pane
   print_title "5.1.12.7 Console prompt"
+  newline
   info 'Running setup_console_prompt method:'
   setup_console_prompt
   if ! check_retval $? ; then
@@ -2682,6 +2707,7 @@ function console_prompt() {
 function emacs_shell() {
   prepare_pane
   print_title "5.1.12.8 Emacs shell"
+  newline
   info 'Running setup_emacs_shell method:'
   setup_emacs_shell
   if ! check_retval $? ; then
@@ -2697,6 +2723,7 @@ function emacs_shell() {
 function mouse_support() {
   prepare_pane
   print_title "5.1.12.9 Mouse support"
+  newline
   info 'Running setup_mouse_support method:'
   setup_mouse_support
   if ! check_retval $? ; then
@@ -2712,6 +2739,7 @@ function mouse_support() {
 function scrollback_buffer() {
   prepare_pane
   print_title "5.1.12.10 Scrollback buffer"
+  newline
   info 'Running setup_scrollback_buffer method:'
   setup_scrollback_buffer
   if ! check_retval $? ; then
@@ -2727,6 +2755,7 @@ function scrollback_buffer() {
 function session_management() {
   prepare_pane
   print_title "5.1.12.11 Session management"
+  newline
   info 'Running setup_session_management method:'
   setup_session_management
   if ! check_retval $? ; then
