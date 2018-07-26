@@ -133,9 +133,9 @@ fstab_identifier='U' # fstab file uses UUID('U') or labels('L')(default: 'U')
 region="Europe"
 city="Zurich"
 #### 3.4 Locale
-LANG="de_CH.UTF-8"
+LANG="de_CH"
 locales=( # default: "en_US.UTF-8 UTF-8"
-  "$LANG UTF-8"
+  "$LANG.UTF-8 UTF-8"
   "de_CH ISO-8859-1"
   "ja_JP.EUC-JP EUC-JP"
   "ja_JP.UTF-8 UTF-8"
@@ -176,8 +176,8 @@ function configure_microcode() {
 #### 5.1.1.1 Users and Groups
 add_users_and_groups() {
   local usr="raphael"
-  exec_cmd "useradd -mG wheel,users,sys,rfkill,log,http,games,ftp -s /bin/zsh -c 'Raphael Emberger' $usr"
-  NO_PIPE=1 exec_cmd passwd $usr
+  useradd -mG wheel,users,sys,rfkill,log,http,games,ftp -s /bin/zsh -c 'Raphael Emberger' $usr
+  passwd $usr
 }
 #### 5.1.1.2 Privilege Escalation
 handle_privilage_escalation() { # Allow users of group "wheel" to use su/sudo
@@ -241,11 +241,12 @@ install_pkgstats= # default: ''
 #### 5.1.2.5 Arch User Repository
 aur_helper="pikaur" # default: '' => No automatic AUR package installation
 install_aur_helper() {
-  exec_cmd pacman --color=always --noconfirm -S git gvim
-  exec_cmd git clone https://aur.archlinux.org/${aur_helper}.git
-  exec_cmd cd $aur_helper
+  exec_cmd pacman --color=always --noconfirm -S git gvim base-devel pyalpm
+  exec_cmd git clone https://aur.archlinux.org/${aur_helper}.git /home/raphael/${aur_helper}
+  exec_cmd chown raphael:raphael -R /home/raphael/${aur_helper}
+  cd /home/raphael/${aur_helper}
   NO_PIPE=1 exec_cmd vim PKGBUILD
-  exec_cmd makepkg -fsri
+  exec_cmd sudo -Hu raphael bash -c makepkg -fsri
   local retval=$?
   exec_cmd cd -
   return $retval
@@ -320,7 +321,7 @@ setup_browser_plugins() {
 }
 #### 5.1.6.3 Codecs
 setup_codecs() {
-  exec_cmd pacman --color=always --noconfirm -S lame libfdk-aac flac openjpeg aom libde265 libmpeg2 libvpx x264 xvidcore gstreamer gst-plugins-good libavcodec ffmpeg
+  exec_cmd pacman --color=always --noconfirm -S lame libfdk-aac flac openjpeg aom libde265 libmpeg2 libvpx x264 xvidcore gstreamer gst-plugins-good ffmpeg
 }
 ########################################
 # 5.1.7 Networking
@@ -330,7 +331,7 @@ setup_clock_sync() {
 }
 #### 5.1.7.2 DNS security
 setup_dns_sec() {
-  exec_cmd pacman --color=always --noconfirm -S ntp
+  return
 }
 #### 5.1.7.3 Setting up a firewall
 setup_firewall() {
@@ -394,7 +395,7 @@ setup_printing() {
 # 5.1.11 Appearance
 #### 5.1.11.1 Fonts
 setup_fonts() {
-  exec_cmd pacman --color=always --noconfirm -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus
+  exec_cmd $aur_helper --color=always --noconfirm -S all-repository-fonts tamzen-font powerline-fonts powerline-console-fonts ttf-mplus
 }
 #### 5.1.11.2 GTK+ and Qt themes
 setup_gtk_qt() {
@@ -459,7 +460,7 @@ packages=(
   wget # because
   nmap # Port scanner
   scrot # screenshot tool
-  screenfetch archey3 lolcat cmatrix # eye candy
+  screenfetch archey3 lolcat cmatrix neofetch # Eye candy
   vimpager # vim as pager
   exa # better ls
   pv # pipe viewer
@@ -495,7 +496,7 @@ packages=(
   redshift python-gobject python-xdg gtk3 gpsd # Screen color/brightness adjusting
   network-manager-applet nm-connection-editor networkmanager-openconnect networkmanager-openvpn # Network manager(duh)
   wpa_supplicant # wireless support
-  pulseaudio alsa-tools alsa-utils alsamixer pulseaudio-alsa pulseaudio-bluetooth pulseaudio-alsa bluez bluez-libs bluez-utils pavucontrol # Audio(& Bluetooth)
+  pulseaudio alsa-tools alsa-utils pulseaudio-alsa pulseaudio-bluetooth pulseaudio-alsa bluez bluez-libs bluez-utils pavucontrol # Audio(& Bluetooth)
   rhythmbox # Music manager/streamer
   flashplugin
   openvpn # VPN
@@ -505,7 +506,6 @@ packages=(
   base-devel # Development package group
 
   # Applications
-  gksu # Graphical sudo request
   wireshark-gtk # Protocol sniffer
   tor # AnOnYmOuS bRoWsInG
   imagemagick # Picture editor
@@ -552,19 +552,19 @@ aur_packages=(
   gravit-designer-bin # Nice design program
   kaku-bin # Music streamer
   grabc # Color picker
-  jabref # Reference manager
+  #jabref # Reference manager
 
   # IDEs
   intellij-idea-ultimate-edition intellij-idea-ultimate-edition-jre # JetBrains Java IDE
 
   # Other
+  gksu # Graphical sudo request
   polybar # Best bar
   dmenu2 # Launcher
-  tamzen-font powerline-fonts powerline-console-fonts powerline-fonts-git ttf-mplus # Moar fontz
+  #tamzen-font powerline-console-fonts ttf-mplus # Moar fontz
   #firefox-extension-stylish # Styling plugin (dead)
   jsawk-git # For some plugin in my dotfiles(don't know which one rn tbh)
   enpass-bin # Key manager
-  neofetch # Eye candy
   jdk jdk8 jdk9 jdk-devel # Java
   nordnm # VPN provider
   python-pywal # Best eye candy there is
@@ -619,9 +619,6 @@ aftermath() {
   sudo ufw enable
   sudo systemctl enable ufw
   sudo systemctl start ufw
-
-  # python-pip
-  sudo pip install pywal
 
   # virtualbox
   #sudo modprobe vboxdrv

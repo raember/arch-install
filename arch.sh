@@ -515,7 +515,7 @@ function install_the_base_packages() {
   newline
   if [[ "$install_now" == "y" ]]; then
     info "Installing base packages:"
-    if ! exec_cmd pacstrap /mnt base --color=always; then
+    if ! exec_cmd pacstrap /mnt base sudo wpa_supplicant --color=always; then
       newline
       error 'Something went wrong.'
     else
@@ -657,11 +657,8 @@ function chroot_into_mnt() {
   exec_cmd "cp $bashrc $oldbashrc"
   exec_cmd "echo \"cd\" | tee -a $bashrc"
   exec_cmd "echo \"~/arch.sh -cl $oldlogfile\" | tee -a $bashrc"
-  exec_cmd "arch-chroot /mnt"
-  newline
-  info "Exited chroot. Rebooting."
-  pause
-  exec_cmd reboot
+  info "Please issue now: arch-chroot /mnt"
+  exit
 }
 
 # 3.3
@@ -690,7 +687,7 @@ function time_zone() {
   newline
   info "Time zone city chosen to be '$city'."
   newline
-  if ! exec_cmd timedatectl set-timezone $region/$city; then
+  if ! exec_cmd ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime; then
     newline
     error "Couldn't set time zone."
     return
@@ -729,6 +726,7 @@ function locale() {
   info "Setting LANG-variable."
   local file="/etc/locale.conf"
   [[ -n "$test_script" ]] && file="/dev/null"
+
   if ! exec_cmd "echo \"LANG=$LANG\" | tee $file"; then
     newline
     error "Couldn't persist LANG variable."
@@ -834,7 +832,7 @@ function boot_loader() {
   fi
   newline
   info 'Intel CPU detected.'
-  if ! exec_cmd pacman--color=always --noconfirm -S intel-ucode; then
+  if ! exec_cmd pacman --color=always --noconfirm -S intel-ucode; then
     newline
     error "Couldn't install package."
     return
@@ -874,7 +872,7 @@ function reboot_system() {
   [[ -n "$run_through" ]] && run='r'
   exec_cmd "echo \"~/arch.sh -${run}p\" | tee -a $bashrc"
   newline
-  info 'Please exit the chroot now(Ctrl+D).'
+  info 'Please exit the chroot now(Ctrl+D) and reboot the system.'
   exit 0
 }
 
@@ -1468,12 +1466,14 @@ function repositories() {
   print_title "5.1.2.2 Repositories"
   newline
   if [[ -n "$enable_multilib" ]]; then
-    info 'Installing dnscrypt.'
+    info 'Enabling multilib.'
     local file="/etc/pacman.conf"
     [[ -n "$test_script" ]] && file="/dev/null"
-    if ! exec_cmd sed -iz 's/#\(\[multilib\]\)\n#\(Include.*mirrorlist\)/\1\n\2/g' "$file"; then
+    if ! exec_cmd "cat $file | sed -z 's/#\(\[multilib\]\)\n#\(Include.*mirrorlist\)/\1\n\2/g' | tee $file"; then
       newline
       warn 'Failure'
+    else
+      exec_cmd pacman -Sy
     fi
     newline
   fi
