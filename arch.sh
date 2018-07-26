@@ -1165,7 +1165,7 @@ function system_maintenance() {
   fi
   if [[ -n "$install_hardened_linux" ]]; then
     info 'Installing hardened linux kernel.'
-    if ! exec_cmd pacman --color=always --noconfirm -S linux-hardened then
+    if ! exec_cmd pacman --color=always --noconfirm -S linux-hardened; then
       newline
       warn 'Failure'
     fi
