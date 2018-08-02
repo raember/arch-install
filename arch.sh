@@ -8,6 +8,7 @@ source bashme/bashme
 loglevel=$LL_INFO
 logfilelevel=$LL_TRACE
 log2file=1
+logbashme=
 
 # Setup:
 PROGRAM_NAME="${BOLD}Arch Install Script${RESET}"
@@ -71,130 +72,46 @@ declare -i left=4
 ################################################################################
 # MAIN
 function main() {
-  declare_stack suggestion
-  local -i number=1
+  enter_menu "Arch Linux Installation"
+  return
+  local -i suggestion=1
+  [[ -n "$_chroot" ]] && _SKIPCHOICE=1 && suggestion=3
+  [[ -n "$_post" ]] && _SKIPCHOICE=1 && suggestion=5
   while : ; do
-    prepare_pane
-    declare -i top
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "Arch Linux Installation"
-    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && [[ -z "$_post" ]] && enumerate_options "Quit" \
-      "1 Pre-Installation" \
-      "2 Installation" \
-      "3 Configure the system" \
-      "4 Reboot" \
-      "5 Post-Installation"
-    while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && [[ -z "$_post" ]] && read_answer "Enter option [$number]: " answer $number
-      [[ -n "$_chroot" ]] && answer=3
-      [[ -n "$_post" ]] && answer=5
-      case "$answer" in
-        0)
-          return
-          ;;
-        1)
-          push suggestion 2
-          pre_installation
-          ;;
-        2)
-          push suggestion 3
-          installation
-          ;;
-        3)
-          push suggestion 4
-          configure_the_system
-          ;;
-        4)
-          push suggestion 5
-          reboot_system
-          ;;
-        5)
-          push suggestion 0
-          post_installation
-          ;;
-        *)
-          newline
-          error "Please choose an option from above."
-          tput rc
-          tput dl 2
-          continue
-          ;;
-      esac
-      break
-    done
-    pop suggestion number
-    trace "In Main. Next number: $number."
+    local -A options=(
+      ["1   Pre-Installation"]=pre_installation
+      ["2   Installation"]=installation
+      ["3   Configure the system"]=configure_the_system
+      ["4   Reboot"]=reboot_system
+      ["5   Post-Installation"]=post_installation
+    )
+    draw_menu
+    choose_enumerated_option $suggestion
   done
 }
 
 ################################################################################
 # 1
 function pre_installation() {
-  local -i number=1
+  enter_menu "Pre-Installation"
+  local -i suggestion=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "1 Pre-Installation"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
-      "1.1 Set the keyboard layout" \
-      "1.2 Verify the boot mode" \
-      "1.3 Connect to the Internet" \
-      "1.4 Update the system clock" \
-      "1.5 Partition the disks" \
-      "1.6 Format the partitions" \
-      "1.7 Mount the file systems"
-    while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
-      case "$answer" in
-        0)
-          return
-          ;;
-        1)
-          push suggestion 2
-          set_keyboard_layout
-          ;;
-        2)
-          push suggestion 3
-          verify_boot_mode
-          ;;
-        3)
-          push suggestion 4
-          connect_to_the_internet
-          ;;
-        4)
-          push suggestion 5
-          update_the_system_clock
-          ;;
-        5)
-          push suggestion 6
-          partition_the_disks
-          ;;
-        6)
-          push suggestion 7
-          format_the_partitions
-          ;;
-        7)
-          push suggestion 0
-          mount_the_file_systems
-          ;;
-        *)
-          newline
-          error "Please choose an option from above."
-          tput rc
-          tput dl 2
-          continue
-          ;;
-      esac
-      pause
-      break
-    done
-    pop suggestion number
-    trace "In Pre-Installation. Next number: $number."
+    local -A options=(
+      ["1   Set the keyboard layout"]=set_the_keyboard_layout
+      ["2   Verify the boot mode"]=verify_boot_mode
+      ["3   Connect to the Internet"]=connect_to_the_internet
+      ["4   Update the system clock"]=update_the_system_clock
+      ["5   Partition the disks"]=partition_the_disks
+      ["6   Format the partitions"]=format_the_partitions
+      ["7   Mount the file systems"]=mount_the_file_systems
+    )
+    draw_menu
+    choose_enumerated_option $suggestion
   done
 }
 
 # 1.1
-function set_keyboard_layout() {
+function set_the_keyboard_layout() {
   while : ; do
     prepare_pane
     print_title "1.1 Set the keyboard layout"
@@ -374,26 +291,26 @@ function mount_the_file_systems() {
 ################################################################################
 # 2
 function installation() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "2 Installation"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "2 Installation"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Main" \
       "2.1 Select the mirrors" \
       "2.2 Install the base packages"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           select_the_mirrors
           ;;
         2)
-          push suggestion 0
+          push suggestions 0
           install_the_base_packages
           pause
           ;;
@@ -407,8 +324,8 @@ function installation() {
       esac
       break
     done
-    pop suggestion number
-    trace "In Installation. Next number: $number."
+    pop suggestions suggestion
+    trace "In Installation. Next suggestion: $suggestion."
   done
 }
 
@@ -435,33 +352,33 @@ declare -rA country_dict=([AU]='Australia' [AT]='Austria' [BD]='Bangladesh'
 )
 # 2.1
 function select_the_mirrors() {
-  local -i number=1
+  local -i suggestion=1
   local -r mirrorlist="/etc/pacman.d/mirrorlist"
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || ([[ $number -eq 1 ]] && [[ $number -ne 0 ]]) && \
+    [[ -z "$run_through" ]] || ([[ $suggestion -eq 1 ]] && [[ $suggestion -ne 0 ]]) && \
       print_title "2.1 Select the mirrors"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Installation" \
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Installation" \
                 "Run reflector command" \
                 "Manually edit mirrorlist"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
-      debug "Current option is: $number"
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      debug "Current option is: $suggestion"
       case "$answer" in
         0)
           return
           ;;
         1)
           if [[ -n "$run_through" ]]; then
-            push suggestion 0
+            push suggestions 0
           else
-            push suggestion 2
+            push suggestions 2
           fi
           run_reflector
           ;;
         2)
-          push suggestion 0
+          push suggestions 0
           NO_PIPE=1 exec_cmd vim "$mirrorlist"
           break
           ;;
@@ -476,8 +393,8 @@ function select_the_mirrors() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Select the mirrors. Next number: $number."
+    pop suggestions suggestion
+    trace "In Select the mirrors. Next suggestion: $suggestion."
   done
 }
 function run_reflector() {
@@ -530,11 +447,11 @@ function install_the_base_packages() {
 ################################################################################
 # 3
 function configure_the_system() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "3 Configure the system"
-    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && enumerate_options "Return to Main" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "3 Configure the system"
+    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && choose_enumerated_option "Return to Main" \
       "3.1 Fstab" \
       "3.2 Chroot" \
       "3.3 Time zone" \
@@ -544,8 +461,8 @@ function configure_the_system() {
       "3.7 Root password" \
       "3.8 Boot loader"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       [[ -n "$_chroot" ]] && answer=3
       _chroot=
       case "$answer" in
@@ -553,35 +470,35 @@ function configure_the_system() {
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           fstab
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           chroot_into_mnt
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           time_zone
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           locale
           ;;
         5)
-          push suggestion 6
+          push suggestions 6
           network_configuration
           ;;
         6)
-          push suggestion 7
+          push suggestions 7
           initramfs
           ;;
         7)
-          push suggestion 8
+          push suggestions 8
           root_password
           ;;
         8)
-          push suggestion 0
+          push suggestions 0
           boot_loader
           ;;
         *)
@@ -595,8 +512,8 @@ function configure_the_system() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Configure the system. Next number: $number."
+    pop suggestions suggestion
+    trace "In Configure the system. Next suggestion: $suggestion."
   done
 }
 
@@ -880,26 +797,26 @@ function reboot_system() {
 # 5
 function post_installation() {
   _post=''
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5 Post-Installation"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Main" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5 Post-Installation"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Main" \
                 "5.1 General Recommendations" \
                 "5.2 Applications"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           general_recommendations
           ;;
         2)
-          push suggestion 0
+          push suggestions 0
           applications
           ;;
         *)
@@ -912,18 +829,18 @@ function post_installation() {
       esac
       break
     done
-    pop suggestion number
-    trace "In Post-Installation. Next number: $number."
+    pop suggestions suggestion
+    trace "In Post-Installation. Next suggestion: $suggestion."
   done
 }
 
 # 5.1
 function general_recommendations() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1 General Recommendations"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1 General Recommendations"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
       "5.1.1  System Administration" \
       "5.1.2  Package management" \
       "5.1.3  Booting" \
@@ -937,58 +854,58 @@ function general_recommendations() {
       "5.1.11 Appearance" \
       "5.1.12 Console Improvements"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           system_administration
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           package_management
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           booting
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           gui
           ;;
         5)
-          push suggestion 6
+          push suggestions 6
           power_management
           ;;
         6)
-          push suggestion 7
+          push suggestions 7
           multimedia
           ;;
         7)
-          push suggestion 8
+          push suggestions 8
           networking
           ;;
         8)
-          push suggestion 9
+          push suggestions 9
           input_devices
           ;;
         9)
-          push suggestion 10
+          push suggestions 10
           optimization
           ;;
         10)
-          push suggestion 11
+          push suggestions 11
           system_service
           ;;
         11)
-          push suggestion 12
+          push suggestions 12
           appearance
           ;;
         12)
-          push suggestion 0
+          push suggestions 0
           console_improvements
           ;;
         *)
@@ -1001,43 +918,43 @@ function general_recommendations() {
       esac
       break
     done
-    pop suggestion number
-    trace "In General Recommendations. Next number: $number."
+    pop suggestions suggestion
+    trace "In General Recommendations. Next suggestion: $suggestion."
   done
 }
 
 # 5.1.1
 function system_administration() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.1 System Administration"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.1 System Administration"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.1.1 Users and Groups" \
       "5.1.1.2 Privilege Escalation" \
       "5.1.1.3 Service Management" \
       "5.1.1.4 System Maintenance"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           users_and_groups
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           privilege_escalation
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           service_management
           ;;
         4)
-          push suggestion 0
+          push suggestions 0
           system_maintenance
           ;;
         *)
@@ -1051,8 +968,8 @@ function system_administration() {
       pause
       break
     done
-    pop suggestion number
-    trace "In System Administration. Next number: $number."
+    pop suggestions suggestion
+    trace "In System Administration. Next suggestion: $suggestion."
   done
 }
 
@@ -1399,41 +1316,41 @@ function system_maintenance() {
 
 # 5.1.2
 function package_management() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.2 Package Management"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.2 Package Management"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.2.1 Pacman" \
       "5.1.2.2 Repositories" \
       "5.1.2.3 Mirrors" \
       "5.1.2.4 Arch Build System" \
       "5.1.2.5 Arch User Repository"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           pacman_menu
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           repositories
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           mirrors
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           arch_build_system
           ;;
         5)
-          push suggestion 0
+          push suggestions 0
           arch_user_repository
           ;;
         *)
@@ -1447,8 +1364,8 @@ function package_management() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Package Management. Next number: $number."
+    pop suggestions suggestion
+    trace "In Package Management. Next suggestion: $suggestion."
   done
 }
 
@@ -1533,36 +1450,36 @@ function arch_user_repository() {
 
 # 5.1.3
 function booting() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.3 Booting"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.3 Booting"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.3.1 Hardware auto-recognition" \
       "5.1.3.2 Microcode" \
       "5.1.3.3 Retaining boot messages" \
       "5.1.3.4 Num Lock activation"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           hardware_auto_recognition
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           microcode
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           retaining_boot_messages
           ;;
         4)
-          push suggestion 0
+          push suggestions 0
           num_lock_activation
           ;;
         *)
@@ -1576,8 +1493,8 @@ function booting() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Booting. Next number: $number."
+    pop suggestions suggestion
+    trace "In Booting. Next suggestion: $suggestion."
   done
 }
 
@@ -1657,41 +1574,41 @@ ExecStartPre=/bin/sh -c 'setleds -D +num < /dev/%I'\" | tee $file"; then
 
 # 5.1.4
 function gui() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.4 Graphical User Interface"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.4 Graphical User Interface"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.4.1 Display server" \
       "5.1.4.2 Display drivers" \
       "5.1.4.3 Desktop environments" \
       "5.1.4.4 Window managers" \
       "5.1.4.5 Display manager"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           display_server
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           display_drivers
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           desktop_environments
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           window_managers
           ;;
         5)
-          push suggestion 0
+          push suggestions 0
           display_manager
           ;;
         *)
@@ -1705,8 +1622,8 @@ function gui() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Graphical User Interface. Next number: $number."
+    pop suggestions suggestion
+    trace "In Graphical User Interface. Next suggestion: $suggestion."
   done
 }
 
@@ -1804,36 +1721,36 @@ function display_manager() {
 
 # 5.1.5
 function power_management() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.5 Power management"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.5 Power management"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.5.1 ACPI events" \
       "5.1.5.2 CPU frequency scaling" \
       "5.1.5.3 Laptops" \
       "5.1.5.4 Suspend and Hibernate"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           acpi_events
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           cpu_frequency_scaling
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           laptops
           ;;
         4)
-          push suggestion 0
+          push suggestions 0
           suspend_and_hibernate
           ;;
         *)
@@ -1847,8 +1764,8 @@ function power_management() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Power Management. Next number: $number."
+    pop suggestions suggestion
+    trace "In Power Management. Next suggestion: $suggestion."
   done
 }
 
@@ -1931,31 +1848,31 @@ function suspend_and_hibernate() {
 
 # 5.1.6
 function multimedia() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.6 Multimedia"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.6 Multimedia"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.6.1 Sound" \
       "5.1.6.2 Browser plugins" \
       "5.1.6.3 Codecs"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           sound
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           browser_plugins
           ;;
         3)
-          push suggestion 0
+          push suggestions 0
           codecs
           ;;
         *)
@@ -1969,8 +1886,8 @@ function multimedia() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Multimedia. Next number: $number."
+    pop suggestions suggestion
+    trace "In Multimedia. Next suggestion: $suggestion."
   done
 }
 
@@ -2025,36 +1942,36 @@ function codecs() {
 
 # 5.1.7
 function networking() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.7 Networking"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.7 Networking"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.7.1 Clock synchronization" \
       "5.1.7.2 DNS security" \
       "5.1.7.3 Setting up a firewall" \
       "5.1.7.4 Resource sharing"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           clock_synchronization
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           dns_security
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           setting_up_a_firewall
           ;;
         4)
-          push suggestion 0
+          push suggestions 0
           resource_sharing
           ;;
         *)
@@ -2068,8 +1985,8 @@ function networking() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Networking. Next number: $number."
+    pop suggestions suggestion
+    trace "In Networking. Next suggestion: $suggestion."
   done
 }
 
@@ -2132,36 +2049,36 @@ function resource_sharing() {
 
 # 5.1.8
 function input_devices() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.8 Input devices"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.8 Input devices"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.8.1 Keyboard layouts" \
       "5.1.8.2 Mouse buttons" \
       "5.1.8.3 Laptop touchpads" \
       "5.1.8.4 TrackPoints"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           keyboard_layouts
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           mouse_buttons
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           laptop_touchpads
           ;;
         4)
-          push suggestion 0
+          push suggestions 0
           trackpoints
           ;;
         *)
@@ -2175,8 +2092,8 @@ function input_devices() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Input devices. Next number: $number."
+    pop suggestions suggestion
+    trace "In Input devices. Next suggestion: $suggestion."
   done
 }
 
@@ -2249,31 +2166,31 @@ function trackpoints() {
 
 # 5.1.9
 function optimization() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.9 Optimization"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.9 Optimization"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.9.1 Benchmarking" \
       "5.1.9.2 Improving performance" \
       "5.1.9.3 Solid state drives"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           benchmarking
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           improving_performance
           ;;
         3)
-          push suggestion 0
+          push suggestions 0
           solid_state_drives
           ;;
         *)
@@ -2287,8 +2204,8 @@ function optimization() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Optimization. Next number: $number."
+    pop suggestions suggestion
+    trace "In Optimization. Next suggestion: $suggestion."
   done
 }
 
@@ -2343,31 +2260,31 @@ function solid_state_drives() {
 
 # 5.1.10
 function system_service() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.10 System service"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.10 System service"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.10.1 File index and search" \
       "5.1.10.2 Local mail delivery" \
       "5.1.10.3 Printing"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           file_index_and_search
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           local_mail_delivery
           ;;
         3)
-          push suggestion 0
+          push suggestions 0
           printing
           ;;
         *)
@@ -2381,8 +2298,8 @@ function system_service() {
       pause
       break
     done
-    pop suggestion number
-    trace "In System service. Next number: $number."
+    pop suggestions suggestion
+    trace "In System service. Next suggestion: $suggestion."
   done
 }
 
@@ -2437,26 +2354,26 @@ function printing() {
 
 # 5.1.11
 function appearance() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.11 Appearance"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.11 Appearance"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.11.1 Fonts" \
       "5.1.11.2 GTK+ and Qt themes"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           fonts
           ;;
         2)
-          push suggestion 0
+          push suggestions 0
           gtkp_and_qt_themes
           ;;
         *)
@@ -2470,8 +2387,8 @@ function appearance() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Appearance. Next number: $number."
+    pop suggestions suggestion
+    trace "In Appearance. Next suggestion: $suggestion."
   done
 }
 
@@ -2509,11 +2426,11 @@ function gtkp_and_qt_themes() {
 
 # 5.1.12
 function console_improvements() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.1.12 Console improvements"
-    [[ -z "$run_through" ]] && enumerate_options "Return to General Recommendations" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.12 Console improvements"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
       "5.1.12.1 Tab-completion enhancements" \
       "5.1.12.2 Aliases" \
       "5.1.12.3 Alternative shells" \
@@ -2526,54 +2443,54 @@ function console_improvements() {
       "5.1.12.10 Scrollback buffer" \
       "5.1.12.11 Session management"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           tab_completion_enhancements
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           aliases
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           alternative_shells
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           bash_additions
           ;;
         5)
-          push suggestion 6
+          push suggestions 6
           colored_output
           ;;
         6)
-          push suggestion 7
+          push suggestions 7
           compressed_files
           ;;
         7)
-          push suggestion 8
+          push suggestions 8
           console_prompt
           ;;
         8)
-          push suggestion 9
+          push suggestions 9
           emacs_shell
           ;;
         9)
-          push suggestion 10
+          push suggestions 10
           mouse_support
           ;;
         10)
-          push suggestion 11
+          push suggestions 11
           scrollback_buffer
           ;;
         11)
-          push suggestion 0
+          push suggestions 0
           session_management
           ;;
         *)
@@ -2587,8 +2504,8 @@ function console_improvements() {
       pause
       break
     done
-    pop suggestion number
-    trace "In Console improvements. Next number: $number."
+    pop suggestions suggestion
+    trace "In Console improvements. Next suggestion: $suggestion."
   done
 }
 
@@ -2772,11 +2689,11 @@ function session_management() {
 function applications() {
   install_packages
   return
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.2 Applications"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.2 Applications"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
       "5.2.1 Internet" \
       "5.2.2 Multimedia" \
       "5.2.3 Utilities" \
@@ -2785,38 +2702,38 @@ function applications() {
       "5.2.6 Science" \
       "5.2.7 Others"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           internet
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           multimedia_applications
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           utilities
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           documents_and_texts
           ;;
         5)
-          push suggestion 6
+          push suggestions 6
           security
           ;;
         6)
-          push suggestion 7
+          push suggestions 7
           science
           ;;
         7)
-          push suggestion 0
+          push suggestions 0
           others
           ;;
         *)
@@ -2829,18 +2746,18 @@ function applications() {
       esac
       break
     done
-    pop suggestion number
-    trace "In Applications. Next number: $number."
+    pop suggestions suggestion
+    trace "In Applications. Next suggestion: $suggestion."
   done
 }
 
 # 5.2.1
 function internet() {
-  local -i number=1
+  local -i suggestion=1
   while : ; do
     prepare_pane
-    [[ -z "$run_through" ]] || [[ $number -eq 1 ]] && print_title "5.2.1 Internet"
-    [[ -z "$run_through" ]] && enumerate_options "Return to Post-Installation" \
+    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.2.1 Internet"
+    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
       "5.2.1.1 Network connection" \
       "5.2.1.2 Web browsers" \
       "5.2.1.3 Web servers" \
@@ -2850,42 +2767,42 @@ function internet() {
       "5.2.1.7 News, RSS, and blogs" \
       "5.2.1.8 Remote desktop"
     while : ; do
-      answer=$number
-      [[ -z "$run_through" ]] && read_answer "Enter option [$number]: " answer $number
+      answer=$suggestion
+      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
       case "$answer" in
         0)
           return
           ;;
         1)
-          push suggestion 2
+          push suggestions 2
           network_connection
           ;;
         2)
-          push suggestion 3
+          push suggestions 3
           web_browsers
           ;;
         3)
-          push suggestion 4
+          push suggestions 4
           web_servers
           ;;
         4)
-          push suggestion 5
+          push suggestions 5
           acme_clients
           ;;
         5)
-          push suggestion 6
+          push suggestions 6
           file_sharing
           ;;
         6)
-          push suggestion 7
+          push suggestions 7
           communication
           ;;
         7)
-          push suggestion 8
+          push suggestions 8
           news_rss_and_blogs
           ;;
         8)
-          push suggestion 0
+          push suggestions 0
           remote_desktop
           ;;
         *)
@@ -2898,8 +2815,8 @@ function internet() {
       esac
       break
     done
-    pop suggestion number
-    trace "In Internet. Next number: $number."
+    pop suggestions suggestion
+    trace "In Internet. Next suggestion: $suggestion."
   done
 }
 
@@ -2958,16 +2875,6 @@ function print_title() {
   trace "Printed title: '$1'"
   newline
 }
-function enumerate_options() {
-  local -i i=0
-  local option
-  for option in "$@"; do
-    newline
-    printf '%s' "$i) $option"
-    trace "Printed option number $i: '$option'"
-    ((i++))
-  done
-}
 function list_options() {
   local -i maxwidth=$(($(tput cols)-left-2))
   local -i width=0
@@ -3024,7 +2931,199 @@ function prepare_pane() {
     tput clear
   fi
 }
+function draw_menu() {
+  local title=$(_get_current_title)
+  if [[ -z "$run_through" ]]; then
+    tput clear
+    tput cup 2 $_OFFSET
+  else
+    tput cud1
+    tput hpa $_OFFSET
+  fi
+  if [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]]; then
+    printf '%s' "${FG_WHITE}${UNDERLINE}${BOLD}$title${RESET}"
+    trace "Drawn menu: '$title'"
+    tput cud 2
+    tput hpa $_OFFSET
+  fi
+}
+function enter_menu() { # title_of_menu
+  local title="$1"
+  _LEVEL=$((${#FUNCNAME[@]}-3))
+  [[ -n "$test_script" ]] && _LEVEL=$((_LEVEL-1))
+  push menu_levels $_LEVEL
+  if [[ -n "$run_through" ]]; then
+    _OFFSET=$((_LEVEL*2+_MINOFFSETRUN))
+  else
+    _OFFSET=$((_LEVEL*2+_MINOFFSETNORMAL))
+  fi
+  _LEVELSTR=''
+  for ((level=1;level<${#menu_levels[@]};level++)); do
+    _LEVELSTR="$_LEVELSTR.${menu_levels[$level]}"
+  done
+  [[ -n "$_LEVELSTR" ]] && title="${_LEVELSTR:1:${#_LEVELSTR}} $title"
+  push menus "$title"
+  trace "Entered menu '$title'."
+}
+function leave_menu() {
+  pop levels _LEVEL
+  local title
+  local titles
+  pop menus title
+  trace "Left menu '$title'."
+}
+function choose_enumerated_option() {
+  local -i suggestion="$1"
+  local choice
+  local -a map
+  if [[ -z "$_SKIPCHOICE" ]] || [[ -z "$run_through" ]]; then
+    tput sc
+    local first=1
+    while ! _validate_choice $choice; do
+      tput rc # Only redraw from beginning of list
+      _print_enumerated_options
+      if [[ -z "$first" ]]; then
+        tput hpa $_OFFSET
+        error "Error: '$choice' is not an option. Please choose one of the options."
+        tput cuu1
+      fi
+      tput cud1
+      tput dl 3 # in case the user writes a ", we need to delete the error msg.
+      _read_choice $suggestion choice
+      first=
+    done
+  else # Assume run_through
+    choice="$suggestion"
+  fi
+  # Evaluate valid choice
+  case "$choice" in
+    r)
+      leave_menu
+      return
+      ;;
+    q)
+      leave_menu
+      exit $EX_OK
+      ;;
+    *)
+      local -i number=$choice
+      local next_menu="${map[$choice]}"
+      local next_method="${options[$next_menu]}"
+      local next_suggestion=$(_get_next_suggestion $number)
+      trace "Chose $number: '$next_menu'. Executing: $next_method"
+      push suggestions $next_suggestion
+      $next_method
+      pop suggestions suggestion
+      ;;
+  esac
+}
+function _validate_choice() { # choice
+  local _choice="$1"
+  if [ $_choice -eq $_choice 2> /dev/null ]; then
+    local -i number=$_choice
+    if ((number>0 && number<=${#options[@]})); then
+      return $EX_OK
+    else
+      return $EX_ERR
+    fi
+  else
+    if _has_parent_node && [[ "$_choice" == "r" ]] || [[ "$_choice" == "q" ]]; then
+      return $EX_OK
+    else
+      return $EX_ERR
+    fi
+  fi
+}
+function _print_enumerated_options() {
+  local _option
+  local optionstr
+  local -i i=1
+  for _option in "${!options[@]}"; do
+    map+=([$i]="$_option")
+    _option="${_option:4:${#_option}}"
+    local level="$i"
+    [[ -n "$_LEVELSTR" ]] && level="$_LEVELSTR.$level"
+    echo "[$i] $level $_option"
+    optionstr="$optionstr, '$_option'"
+    tput hpa $_OFFSET
+    ((i++))
+  done
+  if _has_parent_node; then
+    echo "[r] Return to $(_get_parent_node)"
+    tput hpa $_OFFSET
+  fi
+  echo "[q] Quit"
+  trace "${optionstr:2:${#optionstr}}"
+}
+function _read_choice() { # suggestion choice(out)
+  local suggestion="$1"
+  local _choice
+  tput hpa $_OFFSET
+  printf '%s' "Enter choice [$suggestion]: "
+  read -r _choice
+  [[ -z "$_choice" ]] && _choice="$suggestion"
+  eval "$2='$_choice'"
+}
+function _get_next_suggestion() {
+  local -i _number=$1
+  if ((number=${#options})); then
+    if _has_parent_node; then
+      echo "r"
+    else
+      echo "q"
+    fi
+  else
+    echo $((number+1))
+  fi
+}
+function _has_parent_node() {
+  return $((1-(menus_i>1)))
+}
+function _get_parent_node() {
+  echo "${menus[$(($menus_i-1))]}"
+}
+function _get_menu_string() { # level, title
+  local _level=
+}
+# Variables
+declare_stack suggestions
+declare_stack levels
+declare_stack titles
+declare -i _LEVEL
+declare _TITLE
+declare -ir _MINOFFSETRUN=2
+declare -ir _MINOFFSETNORMAL=4
+declare -i _OFFSET
+declare _CURRENTNODE
+declare _LASTNODE
+declare _SKIPCHOICE
 
 # Start script
 #tput smcup # Not supported in liveISO
-main
+
+enable_tab_completion
+TAB_COMPLETIONS=(
+  mkswap
+  mkfs.btrfs
+  mkfs.fat
+  mkfexfatfs
+  mkfs.f2fs
+  mkfs.hfsplus
+  mkfs.nilfs
+  mkfs.ntfs
+  mkfs.reiser4
+  mkfs.reiserfs
+  mkfs.udf
+  mkfs.xfs
+  mkfs.ext2
+  mkfs.ext3
+  mkfs.ext4
+  mkfs.vfat
+)
+read -ep "$ " answer
+clean_tab_suggestions
+disable_tab_completion
+read -ep "$ " answer
+
+echo "Answer: '$answer'"
+# main
