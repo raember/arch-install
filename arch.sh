@@ -3100,30 +3100,4 @@ declare _SKIPCHOICE
 
 # Start script
 #tput smcup # Not supported in liveISO
-
-enable_tab_completion
-TAB_COMPLETIONS=(
-  mkswap
-  mkfs.btrfs
-  mkfs.fat
-  mkfexfatfs
-  mkfs.f2fs
-  mkfs.hfsplus
-  mkfs.nilfs
-  mkfs.ntfs
-  mkfs.reiser4
-  mkfs.reiserfs
-  mkfs.udf
-  mkfs.xfs
-  mkfs.ext2
-  mkfs.ext3
-  mkfs.ext4
-  mkfs.vfat
-)
-read -ep "$ " answer
-clean_tab_suggestions
-disable_tab_completion
-read -ep "$ " answer
-
-echo "Answer: '$answer'"
-# main
+main
