@@ -651,5 +651,19 @@ tar() { return; }
 passwd() { return; }
 
 test_script=true
-
+unittest=
+if [[ "$1" == "--unittest" ]] || [[ "$1" == "-u" ]]; then
+  shift
+  unittest=1
+fi
+function run_unittests() {
+  { 
+    info "Should execute comands correctly:"
+    OFFSET=4
+    exec_cmd "echo 'hello!' > /dev/null"
+    exec_cmd "echo 'hello!'"
+    info "Done"
+  }
+  info "Tests finished"
+}
 source arch.sh $*

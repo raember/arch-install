@@ -10,7 +10,7 @@ post_prompt=1 # Wait after every part(default: '')
 #
 #### 1.1 Set the keyboard layout
 #keyboard_layout="de_CH-latin1"
-console_font="Lat2-Terminus16.psfu.gz"
+#console_font="Lat2-Terminus16.psfu.gz"
   # Sans-serif-fonts with only moderate eyecancer(I don't like serif fonts):
   # cybercafe.fnt.gz
   # gr928-8x16-thin.psfu.gz
