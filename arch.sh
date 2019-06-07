@@ -22,12 +22,6 @@ USAGE=(
   '[OPTION]...    Execute script with arguments.'
   '               Show this help page.'
 )
-_help=
-_ver=
-logfile=
-_chroot=
-_post=
-run_through=
 define_opt '_help'       '-h' '--help'         ''     'Display this help text.'
 define_opt '_ver'        '-v' '--version'      ''     'Display the VERSION.'
 define_opt 'logfile'     '-l' '--logfile'      'file' "Change logfile to ${ITALIC}file${RESET}."
@@ -39,12 +33,13 @@ As An ArCh UsEr MySeLf I wanted an easy and fast way to reinstall Arch Linux.
 BTW: I uSe ArCh."
 
 # Parse arguments
-declare -i resume=0
 parse_args "$@"
 
 # Process options
 [[ -n "$_help" ]] && print_usage && exit
 [[ -n "$_ver" ]] && print_version && exit
+[[ -n "$_chroot" ]] && SKIPCHOICE=1
+[[ -n "$_post" ]] && SKIPCHOICE=1
 
 # Create a lock file
 #lock
@@ -52,15 +47,29 @@ parse_args "$@"
 # Setup traps
 traps+=(EXIT)
 sig_err() {
-  error "An error occurred(SIGERR)."
+  echo
+  if type m_error &> /dev/null; then
+    m_error "An error occurred(SIGERR)."
+  else
+    error "An error occurred(SIGERR)."
+  fi
   exit;
 }
 sig_int() {
-  error "Canceled by user(SIGINT)."
+  echo
+  if type m_error &> /dev/null; then
+    m_error "Canceled by user(SIGINT)."
+  else
+    error "Canceled by user(SIGINT)."
+  fi
   exit;
 }
 sig_exit() {
-  info "Ending script(SIGEXIT). Cleaning up."
+  if type m_info &> /dev/null; then
+    m_info "Ending script(SIGEXIT). Cleaning up."
+  else
+    m_info "Ending script(SIGEXIT). Cleaning up."
+  fi
   unlock
 }
 trap_signals
@@ -79,234 +88,278 @@ declare -i left=4
 # MAIN
 function main() {
   enter_menu "Arch Linux Installation"
-  return
-  local -i suggestion=1
-  [[ -n "$_chroot" ]] && _SKIPCHOICE=1 && suggestion=3
-  [[ -n "$_post" ]] && _SKIPCHOICE=1 && suggestion=5
+  SUGGESTION=1
+  [[ -n "$_chroot" ]] && SUGGESTION=3
+  [[ -n "$_post" ]] && SUGGESTION=5
   while : ; do
-    local -A options=(
-      ["1   Pre-Installation"]=pre_installation
-      ["2   Installation"]=installation
-      ["3   Configure the system"]=configure_the_system
-      ["4   Reboot"]=reboot_system
-      ["5   Post-Installation"]=post_installation
-    )
     draw_menu
-    choose_enumerated_option ${suggestion}
+    OPTIONS=(
+      "Pre-Installation"
+      "Installation"
+      "Configure the system"
+      "Reboot"
+      "Post-Installation"
+    )
+    ! choose_submenu && break
   done
+  leave_menu
 }
 
 ################################################################################
 # 1
 function pre_installation() {
   enter_menu "Pre-Installation"
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    local -A options=(
-      ["1   Set the keyboard layout"]=set_the_keyboard_layout
-      ["2   Verify the boot mode"]=verify_boot_mode
-      ["3   Connect to the Internet"]=connect_to_the_internet
-      ["4   Update the system clock"]=update_the_system_clock
-      ["5   Partition the disks"]=partition_the_disks
-      ["6   Format the partitions"]=format_the_partitions
-      ["7   Mount the file systems"]=mount_the_file_systems
-    )
     draw_menu
-    choose_enumerated_option ${suggestion}
+    OPTIONS=(
+      "Set the keyboard layout"
+      "Verify the boot mode"
+      "Connect to the Internet"
+      "Update the system clock"
+      "Partition the disks"
+      "Format the partitions"
+      "Mount the file systems"
+    )
+    ! choose_submenu && break
   done
+  leave_menu
 }
 
 # 1.1
 function set_the_keyboard_layout() {
-  while : ; do
-    prepare_pane
-    print_title "1.1 Set the keyboard layout"
-    if [[ -z "$keyboard_layout" ]]; then
-      local -a options=(
-        $(ls /usr/share/kbd/keymaps/**/*.map.gz | \
-          grep -oE '[^/]*$' | \
-          sed 's/\.map\.gz//g' | \
-          sort)
-        )
+  enter_menu "Set the keyboard layout"
+  draw_menu
+  if [[ -z "$keyboard_layout" ]]; then
+    SUGGESTION=us
+    OPTIONS=($(
+      ls /usr/share/kbd/keymaps/**/*.map.gz | \
+        grep -oE '[^/]*$' | \
+        sed 's/\.map\.gz//g' | \
+        sort
+      ))
+    TAB_COMPLETIONS=(${OPTIONS[@]})
+    list_options
+    choose keyboard_layout
+  fi
+  m_info "Setting keyboard layout to '$keyboard_layout'."
+  if ! exec_cmd loadkeys $keyboard_layout; then
+    m_warn "Couldn't set the keyboard layout."
+  fi
+  if [[ -z "$console_font" ]]; then
+    pause
+    while : ; do
+      [[ -n "$console_font" ]] && break
+      draw_menu
+      SUGGESTION='default8x16.psfu.gz'
+      OPTIONS=($(
+        ls /usr/share/kbd/consolefonts | \
+        grep -Ev 'README|ERRORS|partialfonts' #| \
+        # sed 's/\(\.cp\|\.psfu\|\.psf\|\.fnt\|\)\.gz$//g'
+      ))
+      OPTIONS+=('cycle')
+      TAB_COMPLETIONS=("${OPTIONS[@]}")
       list_options
-      keyboard_layout=us
-      [[ -z "$run_through" ]] && read_answer "Enter option (us): " keyboard_layout us
-    fi
-    newline
-    info "Setting keyboard layout to '$keyboard_layout'."
-    exec_cmd loadkeys ${keyboard_layout} && break
-    warn "Couldn't set the keyboard layout."
-    keyboard_layout=
-  done
-  pause
-  while : ; do
-    if [[ -z "$console_font" ]]; then
-      local -a options=($(ls /usr/share/kbd/consolefonts))
-      list_options
-      info "Write 'cycle' to test each font."
-      console_font='default8x16'
-      [[ -z "$run_through" ]] && read_answer "Enter option (default8x16): " console_font default8x16
+      m_info "Write 'cycle' to test each font."
+      choose console_font
       if [[ "$console_font" == "cycle" ]]; then
-        for consfnt in "${options[@]}"; do
+        local -a FONTS=()
+        for fnt in "${OPTIONS[@]}"; do
+          FONTS+=("$fnt")
+        done
+        SUGGESTION=''
+        OPTIONS=('Next font' 'Previous font' 'Select this font' 'Quit cycling mode')
+        TAB_COMPLETIONS=('' 'p' 's' 'q')
+        local -i fntindex=0
+        while : ; do
           tput clear
-          setfont $consfnt
-          print_title "Font: $consfnt"
-          newline
-          tput hpa 0
-          showconsolefont
-          echo 'Lorem ipsum dolor sit amet.'
-          read
+          setfont "${FONTS[$fntindex]}"
+          tput vpa 2
+          m_info "Font: ${FONTS[$fntindex]}"
+          showconsolefont | nl -w$OFFSET
+          enumerate_options
+          choose answer
+          case $answer in
+            p)
+              ((fntindex--))
+              continue
+              ;;
+            s)
+              console_font="${FONTS[$fntindex]}"
+              ;&
+            q)
+              break
+              ;;
+          esac
+          ((fntindex++))
         done
         setfont
         continue
+      else
+        break
       fi
-    fi
-    newline
-    info "Setting console font to '$console_font'."
-    exec_cmd setfont ${console_font} && break
-    warn "Couldn't set the console font."
-    console_font=
-  done
+    done
+  fi
+  echo
+  m_info "Setting console font to '$console_font'."
+  if ! exec_cmd setfont $console_font; then
+    m_warn "Couldn't set the console font."
+  fi
+  echo
+  leave_menu
 }
 
 # 1.2
-function verify_boot_mode() {
-  prepare_pane
-  print_title "1.2 Verifying the boot mode"
-  newline
-  debug "Checking if efivars exist."
-  if [[ -f /sys/firmware/efi/efivars ]] ; then
-    info "UEFI is enabled."
+function verify_the_boot_mode() {
+  enter_menu "Verifying the boot mode"
+  draw_menu
+  m_info "Checking if efivars exist."
+  if exec_cmd ls /sys/firmware/efi/efivars; then
+    echo
+    m_info "UEFI is enabled."
   else
-    info "UEFI is disabled."
+    echo
+    m_info "UEFI is disabled."
   fi
+  echo
+  leave_menu
 }
 
 # 1.3
 function connect_to_the_internet() {
-  prepare_pane
-  print_title "1.3 Connect to the Internet"
-  newline
-  info "Checking internet connectivity."
+  enter_menu "Connect to the Internet"
+  draw_menu
+  m_info "Checking internet connectivity."
   [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
-  while : ; do
-    debug "Pinging $ping_address."
-    if exec_cmd ping -c 1 ${ping_address}; then
-      newline
-      info "Internet is up and running"
-      break;
-    else
-      newline
-      info "No active internet connection found"
-      info "Please stop the running dhcpcd service with ${ITALIC}systemctl stop dhcpcd@${RESET} and pressing ${format_code}Tab${format_no_code}.
-Proceed with ${BOLD}Network configuration${RESET}:
-${ITALIC}${UNDERLINE}https://wiki.archlinux.org/index.php/Network_configuration#Device_driver${RESET}
-for ${BOLD}wired${RESET} devices or ${font_bold}Wireless network configuration${RESET}:
-${ITALIC}${UNDERLINE}https://wiki.archlinux.org/index.php/Wireless_network_configuration${RESET}
-for ${BOLD}wireless${RESET} devices.
-Then resume this script with ${ITALIC}-r $INDEX${RESET}."
-      exit ${EX_OK}
-    fi
-  done
+  if exec_cmd ping -c 1 $ping_address; then
+    echo
+    m_info "Internet is up and running"
+  else
+    echo
+    m_warn "No active internet connection found"
+  fi
+  echo
+  leave_menu
 }
 
 # 1.4 
 function update_the_system_clock() {
-  prepare_pane
-  print_title "1.4 Update the system clock"
-  newline
-  info "Enabling NTP synchronization."
+  enter_menu "Update the system clock"
+  draw_menu
+  m_info "Enabling NTP synchronization."
   if ! exec_cmd timedatectl set-ntp true; then
-    newline
-    error "Couldn't enable NTP synchronization."
+    echo
+    m_error "Couldn't enable NTP synchronization."
   fi
+  echo
+  leave_menu
 }
 
 # 1.5
 function partition_the_disks() {
-  prepare_pane
-  print_title "1.5 Partition the disks"
-  newline
+  enter_menu "Partition the disks"
+  draw_menu
   exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
-  newline
-  local partition_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should partitioning command be run now? [Y/n]: " partition_now y
-  newline
+  echo
+  SUGGESTION=y
+  OPTIONS=(y n)
+  TAB_COMPLETIONS=("${OPTIONS[@]}")
+  exec_cmd type partition_disks
+  echo
+  m_info 'Should partitioning command be run now? [Y/n]'
+  local partition_now
+  choose partition_now
+  echo
   if [[ "$partition_now" == "y" ]]; then
-    info "Executing command:"
     if ! exec_cmd partition_disks; then
-      newline
-      error "Couldn't run partitioning command."
+      echo
+      m_error "Couldn't run partitioning command."
     else
-      newline
-      info 'Finished partitioning.'
-      newline
-      info 'Updated block devices:'
+      echo
+      m_info 'Finished partitioning.'
+      echo
+      m_info 'Updated block devices:'
       exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
     fi
-  else
-    info 'Not running command.'
   fi
+  echo
+  leave_menu
 }
 
 # 1.6
 function format_the_partitions() {
-  prepare_pane
-  print_title "1.6 Format the partitions"
-  newline
+  enter_menu "Format the partitions"
+  draw_menu
   exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
-  local format_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the formatting command be run now? [Y/n]: " format_now y
-  newline
+  echo
+  SUGGESTION=y
+  OPTIONS=(y n)
+  TAB_COMPLETIONS=("${OPTIONS[@]}")
+  exec_cmd type format_partitions
+  echo
+  m_info 'Should formatting command be run now? [Y/n]'
+  local format_now
+  choose format_now
+  echo
   if [[ "$format_now" == "y" ]]; then
-    info "Executing format_partitions:"
+    m_info "Executing format_partitions:"
     if ! exec_cmd format_partitions; then
-      newline
+      echo
       error 'Something went wrong.'
     else
-      newline
-      info 'Finished formatting.'
+      echo
+      m_info 'Finished formatting.'
     fi
   else
-    info 'Not running command.'
+    m_info 'Not running command.'
   fi
+  echo
+  leave_menu
 }
 
 # 1.7
 function mount_the_file_systems() {
-  prepare_pane
-  print_title "1.7 Mount the file systems"
-  local mount_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the mounting command be run now? [Y/n]: " mount_now y
-  newline
+  enter_menu "Mount the file systems"
+  draw_menu
+  SUGGESTION=y
+  OPTIONS=(y n)
+  TAB_COMPLETIONS=("${OPTIONS[@]}")
+  exec_cmd type mount_partitions
+  echo
+  m_info 'Should mounting command be run now? [Y/n]'
+  local mount_now
+  choose mount_now
+  echo
   if [[ "$mount_now" == "y" ]]; then
-    info "Executing mount_partitions:"
+    m_info "Executing mount_partitions:"
     if ! exec_cmd mount_partitions; then
-      newline
+      echo
       error 'Something went wrong.'
     else
-      newline
-      info 'Updated block devices:'
+      echo
+      m_info 'Updated block devices:'
       exec_cmd lsblk -o NAME,TYPE,FSTYPE,LABEL,SIZE,MOUNTPOINT,HOTPLUG
     fi
   else
-    info 'Not running command.'
+    m_info 'Not running command.'
   fi
+  echo
+  leave_menu
 }
 
 ################################################################################
 # 2
 function installation() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "2 Installation"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Main" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "2 Installation"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Main" \
       "2.1 Select the mirrors" \
       "2.2 Install the base packages"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -321,8 +374,8 @@ function installation() {
           pause
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -330,8 +383,8 @@ function installation() {
       esac
       break
     done
-    pop suggestions suggestion
-    trace "In Installation. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Installation. Next SUGGESTION: $SUGGESTION."
   done
 }
 
@@ -358,19 +411,19 @@ declare -rA country_dict=([AU]='Australia' [AT]='Austria' [BD]='Bangladesh'
 )
 # 2.1
 function select_the_mirrors() {
-  local -i suggestion=1
+  SUGGESTION=1
   local -r mirrorlist="/etc/pacman.d/mirrorlist"
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || ([[ $suggestion -eq 1 ]] && [[ $suggestion -ne 0 ]]) && \
-      print_title "2.1 Select the mirrors"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Installation" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || ([[ $SUGGESTION -eq 1 ]] && [[ $SUGGESTION -ne 0 ]]) && \
+      __print_title "2.1 Select the mirrors"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Installation" \
                 "Run reflector command" \
                 "Manually edit mirrorlist"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
-      debug "Current option is: $suggestion"
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
+      debug "Current option is: $SUGGESTION"
       case "$answer" in
         0)
           return
@@ -389,8 +442,8 @@ function select_the_mirrors() {
           break
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -399,8 +452,8 @@ function select_the_mirrors() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Select the mirrors. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Select the mirrors. Next SUGGESTION: $SUGGESTION."
   done
 }
 function run_reflector() {
@@ -410,54 +463,54 @@ function run_reflector() {
     mirrorlist_bak="$mirrorlist.bak$i"
     ((i++))
   done
-  newline
-  info "Backing up mirrorlist to '$mirrorlist_bak'."
+  __newline
+  m_info "Backing up mirrorlist to '$mirrorlist_bak'."
   exec_cmd cp "$mirrorlist" "$mirrorlist_bak"
-  newline
+  __newline
   if ! type foo &>/dev/null; then
-    info 'Reflector not installed. Installing now.'
+    m_info 'Reflector not installed. Installing now.'
     if ! exec_cmd pacman --color=always --noconfirm -Sy reflector; then
-      newline
-      error "Couldn't install reflector."
+      __newline
+      m_error "Couldn't install reflector."
       return
     fi
-    newline
+    __newline
   fi
-  info 'Running reflector now(this may take a while).'
+  m_info 'Running reflector now(this may take a while).'
   exec_cmd reflector ${reflector_args[*]} --save "$mirrorlist"
-  newline
-  info 'Done'
+  __newline
+  m_info 'Done'
 }
 
 # 2.2
 function install_the_base_packages() {
-  prepare_pane
-  print_title "2.2 Install the base packages"
+  __prepare_pane
+  __print_title "2.2 Install the base packages"
   local install_now='y'
-  [[ -z "$run_through" ]] && read_answer "Should the base package installation be run now? [Y/n]: " install_now y
-  newline
+  [[ -z "$run_through" ]] && __read_answer "Should the base package installation be run now? [Y/n]: " install_now y
+  __newline
   if [[ "$install_now" == "y" ]]; then
-    info "Installing base packages:"
+    m_info "Installing base packages:"
     if ! exec_cmd pacstrap /mnt base sudo wpa_supplicant --color=always; then
-      newline
+      __newline
       error 'Something went wrong.'
     else
-      newline
-      info 'Finished installing base packages.'
+      __newline
+      m_info 'Finished installing base packages.'
     fi
   else
-    info 'Not installing base packages.'
+    m_info 'Not installing base packages.'
   fi
 }
 
 ################################################################################
 # 3
 function configure_the_system() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "3 Configure the system"
-    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && choose_enumerated_option "Return to Main" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "3 Configure the system"
+    [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && choose_from_enumeration "Return to Main" \
       "3.1 Fstab" \
       "3.2 Chroot" \
       "3.3 Time zone" \
@@ -467,8 +520,8 @@ function configure_the_system() {
       "3.7 Root password" \
       "3.8 Boot loader"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && [[ -z "$_chroot" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       [[ -n "$_chroot" ]] && answer=3
       _chroot=
       case "$answer" in
@@ -508,8 +561,8 @@ function configure_the_system() {
           boot_loader
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -518,34 +571,34 @@ function configure_the_system() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Configure the system. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Configure the system. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 3.1
 function fstab() {
   while : ; do
-    prepare_pane
-    print_title "3.1 Fstab"
+    __prepare_pane
+    __print_title "3.1 Fstab"
     if [[ -z $fstab_identifier ]] ; then
       fstab_identifier="u"
-      [[ -z "$run_through" ]] && read_answer "Enter option (us): " fstab_identifier "u"
-      read_answer "Use UUIDs(u/U) or labels(l/L)?" answer "U"
+      [[ -z "$run_through" ]] && __read_answer "Enter option (us): " fstab_identifier "u"
+      __read_answer "Use UUIDs(u/U) or labels(l/L)?" answer "U"
       fstab_identifier=$answer
     fi
-    newline
+    __newline
     case "$fstab_identifier" in
       [uU])
-        info "Using UUIDs to generate the fstab file..."
+        m_info "Using UUIDs to generate the fstab file..."
         fstab_identifier="U"
         ;;
       [lL])
-        info "Using labels to generate the fstab file..."
+        m_info "Using labels to generate the fstab file..."
         fstab_identifier="L"
         ;;
       *)
-        error "Please choose an option from above."
+        m_error "Please choose an option from above."
         tput rc
         tput dl 2
         continue
@@ -555,17 +608,17 @@ function fstab() {
   local fstab_file="/mnt/etc/fstab"
   [[ -n "$test_script" ]] && fstab_file="/dev/null"
   if ! exec_cmd "genfstab -$fstab_identifier /mnt | tee $fstab_file"; then
-    error "Couldn't generate fstab-file."
+    m_error "Couldn't generate fstab-file."
   fi
 }
 
 # 3.2
 function chroot_into_mnt() {
   _chroot=''
-  prepare_pane
-  print_title "3.2 Chroot"
-  newline
-  info "Copying the files over to the child system."
+  __prepare_pane
+  __print_title "3.2 Chroot"
+  __newline
+  m_info "Copying the files over to the child system."
   exec_cmd mkdir -p /mnt/root/bashme
   exec_cmd cp "./bashme/bashme" "/mnt/root/bashme/"
   exec_cmd cp "./{arch.sh,$(basename $logfile),settings.sh}" "/mnt/root/"
@@ -580,14 +633,14 @@ function chroot_into_mnt() {
   exec_cmd "cp $bashrc $oldbashrc"
   exec_cmd "echo \"cd\" | tee -a $bashrc"
   exec_cmd "echo \"~/arch.sh -cl $oldlogfile\" | tee -a $bashrc"
-  info "Please issue now: arch-chroot /mnt"
+  m_info "Please issue now: arch-chroot /mnt"
   exit
 }
 
 # 3.3
 function time_zone() {
-  prepare_pane
-  print_title "3.3 Time zone"
+  __prepare_pane
+  __print_title "3.3 Time zone"
   if [[ -z $region ]] ; then
     # timedatectl list-timezones | cut -d'/' -f1 | uniq
     local -a options=($(
@@ -597,72 +650,72 @@ function time_zone() {
     ))
     list_options
     region="Asia"
-    [[ -z "$run_through" ]] && read_answer "Enter option (Asia): " region "Asia"
+    [[ -z "$run_through" ]] && __read_answer "Enter option (Asia): " region "Asia"
   fi
-  newline
-  info "Time zone region chosen to be '$region'."
+  __newline
+  m_info "Time zone region chosen to be '$region'."
   if [[ -z $city ]] ; then
     local -a options=($(ls /usr/share/zoneinfo/$region/))
     list_options
     city="Tokyo"
-    [[ -z "$run_through" ]] && read_answer "Enter option (Tokyo): " city "Tokyo"
+    [[ -z "$run_through" ]] && __read_answer "Enter option (Tokyo): " city "Tokyo"
   fi
-  newline
-  info "Time zone city chosen to be '$city'."
-  newline
+  __newline
+  m_info "Time zone city chosen to be '$city'."
+  __newline
   if ! exec_cmd ln -sf /usr/share/zoneinfo/$region/$city /etc/localtime; then
-    newline
-    error "Couldn't set time zone."
+    __newline
+    m_error "Couldn't set time zone."
     return
   fi
   exec_cmd hwclock --systohc
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 3.4
 function locale() {
-  prepare_pane
-  print_title "3.4 Locale"
-  newline
+  __prepare_pane
+  __print_title "3.4 Locale"
+  __newline
   if [ ${#locales[@]} -eq 0 ]; then
-    info 'Editing /etc/locale.gen file.'
+    m_info 'Editing /etc/locale.gen file.'
     pause
     NO_PIPE=1 exec_cmd vim /etc/locale.gen
   else
-    info 'Uncommenting locales.'
+    m_info 'Uncommenting locales.'
     local locale
     for locale in "${locales[@]}"; do
       if ! exec_cmd sed -i "'s/^#$locale/$locale/g'" /etc/locale.gen; then
-        error "Couldn't uncomment $locale."
+        m_error "Couldn't uncomment $locale."
         return
       fi
     done
   fi
-  newline
-  info 'Running locale generator.'
+  __newline
+  m_info 'Running locale generator.'
   if ! exec_cmd locale-gen; then
-    error "Couldn't run locale generator."
+    m_error "Couldn't run locale generator."
     return
   fi
-  newline
-  info "Setting LANG-variable."
+  __newline
+  m_info "Setting LANG-variable."
   local file="/etc/locale.conf"
   [[ -n "$test_script" ]] && file="/dev/null"
 
   if ! exec_cmd "echo \"LANG=$LANG\" | tee $file"; then
-    newline
-    error "Couldn't persist LANG variable."
+    __newline
+    m_error "Couldn't persist LANG variable."
     return
   fi
   if [[ -n "$keyboard_layout" ]]; then
-    newline
-    info "Setting KEYMAP-variable."
+    __newline
+    m_info "Setting KEYMAP-variable."
     local file="/etc/vconsole.conf"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo \"KEYMAP=$keyboard_layout\" | tee $file"; then
-      newline
-      error "Couldn't persist KEYMAP variable."
+      __newline
+      m_error "Couldn't persist KEYMAP variable."
       return
     fi
   fi
@@ -670,114 +723,114 @@ function locale() {
 
 # 3.5
 function network_configuration() {
-  prepare_pane
-  print_title "3.5 Network Configuration"
-  newline
+  __prepare_pane
+  __print_title "3.5 Network Configuration"
+  __newline
   [[ -n "$run_through" ]] && [[ -z "$hostname" ]] && hostname="arch"
-  [[ -z "$hostname" ]] && read_answer "Please specify a host name [arch]: " hostname "arch"
-  info 'Setting host name.'
+  [[ -z "$hostname" ]] && __read_answer "Please specify a host name [arch]: " hostname "arch"
+  m_info 'Setting host name.'
   local file="/etc/hostname"
   [[ -n "$test_script" ]] && file="/dev/null"
   if ! exec_cmd "echo \"$hostname\" | tee $file"; then
-    newline
-    error "Couldn't save host name."
+    __newline
+    m_error "Couldn't save host name."
     return
   fi
-  newline
-  info 'Writing hosts file.'
+  __newline
+  m_info 'Writing hosts file.'
   [[ -z "$perm_ip" ]] && perm_ip="127.0.1.1"
   local value="$(cat << eof
 127.0.0.1	localhost
 ::1		localhost
 $perm_ip	$hostname.localdomain	$hostname
 eof
-)"
+  )"
   local file="/etc/hosts"
   [[ -n "$test_script" ]] && file="/dev/null"
   if ! exec_cmd "echo \"$value\" | tee $file"; then
-    newline
-    error "Couldn't write hosts file."
+    __newline
+    m_error "Couldn't write hosts file."
     return
   fi
 }
 
 # 3.6
 function initramfs() {
-  prepare_pane
-  print_title "3.5 Initramfs"
-  newline
+  __prepare_pane
+  __print_title "3.5 Initramfs"
+  __newline
   if [[ -n "$edit_mkinitcpio" ]]; then
-    info 'Editing /etc/mkinitcpio.conf.'
+    m_info 'Editing /etc/mkinitcpio.conf.'
     NO_PIPE=1 exec_cmd vim "/etc/mkinitcpio.conf"
     if ! exec_cmd mkinitcpio -p linux; then
-      error "Couldn't rebuild initramfs image."
+      m_error "Couldn't rebuild initramfs image."
       return
     fi
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   else
-    info 'Nothing to do.'
+    m_info 'Nothing to do.'
   fi
 }
 
 # 3.7
 function root_password() {
-  prepare_pane
-  print_title "3.7 Root password"
-  newline
-  info 'Please set a root password:'
+  __prepare_pane
+  __print_title "3.7 Root password"
+  __newline
+  m_info 'Please set a root password:'
   if ! NO_PIPE=1 exec_cmd passwd; then
-    newline
-    error "Couldn't set the root password."
+    __newline
+    m_error "Couldn't set the root password."
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 3.8
 function boot_loader() {
-  prepare_pane
-  print_title "3.8 Boot loader"
-  newline
-  info 'Executing install_bootloader method:'
+  __prepare_pane
+  __print_title "3.8 Boot loader"
+  __newline
+  m_info 'Executing install_bootloader method:'
   if ! exec_cmd install_bootloader; then
-    newline
-    error "Couldn't run command successfully."
+    __newline
+    m_error "Couldn't run command successfully."
     return
   fi
-  newline
-  info 'Checking for Intel.'
+  __newline
+  m_info 'Checking for Intel.'
   if ! exec_cmd grep \'Intel\' /proc/cpuinfo; then
-    newline
-    info 'No Intel CPU found.'
+    __newline
+    m_info 'No Intel CPU found.'
     return
   fi
-  newline
-  info 'Intel CPU detected.'
+  __newline
+  m_info 'Intel CPU detected.'
   if ! exec_cmd pacman --color=always --noconfirm -S intel-ucode; then
-    newline
-    error "Couldn't install package."
+    __newline
+    m_error "Couldn't install package."
     return
   fi
-  newline
-  info 'Executing configure_microcode method:'
+  __newline
+  m_info 'Executing configure_microcode method:'
   if ! exec_cmd configure_microcode; then
-    newline
-    error "Couldn't run command successfully."
+    __newline
+    m_error "Couldn't run command successfully."
     return
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
 }
 
 # 4
 function reboot_system() {
-  prepare_pane
-  print_title "4 Reboot"
-  newline
-  info 'Cleaning up files.'
+  __prepare_pane
+  __print_title "4 Reboot"
+  __newline
+  m_info 'Cleaning up files.'
   local bashrc="/mnt/root/.bashrc"
   local oldbashrc="${bashrc}.bak"
   if [[ -n "$test_script" ]]; then
@@ -794,8 +847,8 @@ function reboot_system() {
   local run=''
   [[ -n "$run_through" ]] && run='r'
   exec_cmd "echo \"~/arch.sh -${run}p\" | tee -a $bashrc"
-  newline
-  info 'Please exit the chroot now(Ctrl+D) and reboot the system.'
+  __newline
+  m_info 'Please exit the chroot now(Ctrl+D) and reboot the system.'
   exit 0
 }
 
@@ -803,16 +856,16 @@ function reboot_system() {
 # 5
 function post_installation() {
   _post=''
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5 Post-Installation"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Main" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5 Post-Installation"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Main" \
                 "5.1 General Recommendations" \
                 "5.2 Applications"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -826,8 +879,8 @@ function post_installation() {
           applications
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -835,18 +888,18 @@ function post_installation() {
       esac
       break
     done
-    pop suggestions suggestion
-    trace "In Post-Installation. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Post-Installation. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1
 function general_recommendations() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1 General Recommendations"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1 General Recommendations"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Post-Installation" \
       "5.1.1  System Administration" \
       "5.1.2  Package management" \
       "5.1.3  Booting" \
@@ -860,8 +913,8 @@ function general_recommendations() {
       "5.1.11 Appearance" \
       "5.1.12 Console Improvements"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -915,8 +968,8 @@ function general_recommendations() {
           console_improvements
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -924,25 +977,25 @@ function general_recommendations() {
       esac
       break
     done
-    pop suggestions suggestion
-    trace "In General Recommendations. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In General Recommendations. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.1
 function system_administration() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.1 System Administration"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.1 System Administration"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.1.1 Users and Groups" \
       "5.1.1.2 Privilege Escalation" \
       "5.1.1.3 Service Management" \
       "5.1.1.4 System Maintenance"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -964,8 +1017,8 @@ function system_administration() {
           system_maintenance
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -974,367 +1027,367 @@ function system_administration() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In System Administration. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In System Administration. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.1.1
 function users_and_groups() {
-  prepare_pane
-  print_title "5.1.1.1 Users and Groups"
-  newline
-  info "Executing the add_users_and_groups method:"
+  __prepare_pane
+  __print_title "5.1.1.1 Users and Groups"
+  __newline
+  m_info "Executing the add_users_and_groups method:"
   if ! exec_cmd add_users_and_groups; then
-    newline
-    error "Couldn't run command."
+    __newline
+    m_error "Couldn't run command."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
 }
 
 # 5.1.1.2
 function privilege_escalation() {
-  prepare_pane
-  print_title "5.1.1.2 Privilege Escalation"
-  newline
-  info 'Executing the handle_privilage_escalation method:'
+  __prepare_pane
+  __print_title "5.1.1.2 Privilege Escalation"
+  __newline
+  m_info 'Executing the handle_privilage_escalation method:'
   if ! exec_cmd handle_privilage_escalation; then
-    newline
-    error "Couldn't run command."
+    __newline
+    m_error "Couldn't run command."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
 }
 
 # 5.1.1.3
 function service_management() {
-  prepare_pane
-  print_title "5.1.1.3 Service Management"
-  newline
-  info 'Nothing to do here.'
+  __prepare_pane
+  __print_title "5.1.1.3 Service Management"
+  __newline
+  m_info 'Nothing to do here.'
 }
 
 # 5.1.1.4
 function system_maintenance() {
-  prepare_pane
-  print_title "5.1.1.4 System Maintenance"
-  newline
-  info 'Checking if any services failed.'
+  __prepare_pane
+  __print_title "5.1.1.4 System Maintenance"
+  __newline
+  m_info 'Checking if any services failed.'
   if ! exec_cmd systemctl --failed; then
-    newline
+    __newline
     warn 'Failure'
   fi
-  newline
-  info 'Checking logs.'
+  __newline
+  m_info 'Checking logs.'
   if ! exec_cmd journalctl -p 3 -xb; then
-    newline
+    __newline
     warn 'Failure'
   fi
-  newline
+  __newline
   if [[ -n "$backup_pacman_db" ]]; then
-    info 'Backing up pacman database.'
+    m_info 'Backing up pacman database.'
     if ! exec_cmd tar -cjf local.bak.tar.bz2 /var/lib/pacman/local; then
-      newline
+      __newline
       warn 'Failure'
     else
       if ! exec_cmd mv local.bak.tar.bz2 /var/lib/pacman/local.bak.tar.bz2; then
-        newline
+        __newline
         warn 'Failure'
       fi
     fi
-    newline
+    __newline
   fi
   if [[ -n "$change_pw_policy" ]]; then
-    info 'Setting password policy.'
+    m_info 'Setting password policy.'
     local file="/etc/pam.d/passwd"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "setup_pw_policy | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$change_lockout_policy" ]]; then
-    info 'Setting lock out policy.'
+    m_info 'Setting lock out policy.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "setup_lockout_policy | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if ((faildelay >= 0)); then
-    info 'Writing fail delay to /etc/pam.d/system-login.'
+    m_info 'Writing fail delay to /etc/pam.d/system-login.'
     local file="/etc/pam.d/system-login"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo \"auth optional pam_faildelay.so delay=$faildelay\" | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   local file="/etc/pam.d/system-login"
   [[ -n "$test_script" ]] && file="/dev/null"
-  info 'Commenting out deprecated line.'
+  m_info 'Commenting out deprecated line.'
   if ! exec_cmd sed -i 's/^auth\ *required\ *pam_tally.so.*$/#\0/g' "$file"; then
-    newline
+    __newline
     warn 'Failure'
   fi
   if [[ -n "$install_hardened_linux" ]]; then
-    info 'Installing hardened linux kernel.'
+    m_info 'Installing hardened linux kernel.'
     if ! exec_cmd pacman --color=always --noconfirm -S linux-hardened; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   else
-    newline
+    __newline
     if [[ -n "$restrict_k_log_acc" ]]; then
-      info 'Restricting kernel log access to root.'
+      m_info 'Restricting kernel log access to root.'
       local file="/etc/sysctl.d/50-dmesg-restrict.conf"
       [[ -n "$test_script" ]] && file="/dev/null"
       if ! exec_cmd "echo \"kernel.dmesg_restrict = 1\" | tee -a $file"; then
-        newline
+        __newline
         warn 'Failure'
       fi
-      newline
+      __newline
     fi
     if [[ -n "$restrict_k_ptr_acc" ]]; then
-      info 'Restricting kernel pointer access.'
+      m_info 'Restricting kernel pointer access.'
       local file="/etc/sysctl.d/50-kptr-restrict.conf"
       [[ -n "$test_script" ]] && file="/dev/null"
       if ! exec_cmd "echo \"kernel.kptr_restrict = $restrict_k_ptr_acc\" | tee -a $file"; then
-        newline
+        __newline
         warn 'Failure'
       fi
-      newline
+      __newline
     fi
   fi
   if [[ -n "$bpf_jit_enable" ]]; then
-    info 'Disabling the BPF JIT compiler.'
+    m_info 'Disabling the BPF JIT compiler.'
     local file="/proc/sys/net/core/bpf_jit_enable"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo $bpf_jit_enable | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$sandbox_app" ]]; then
-    info "Installing sandbox application $sandbox_app."
+    m_info "Installing sandbox application $sandbox_app."
     #echo "$sandbox_app" | sed 's/,/ /g' | sed 's/lxc/lxc arch-install-scripts/g'
     sandbox_app=${sandbox_app/,/ }
     sandbox_app=${sandbox_app/lxc/lxc arch-install-scripts}
     [[ $sandbox_app =~ .*virtualbox.* ]] && \
       warn 'Please install the virtualbox host modules appropriate for your kernel.'
     if ! exec_cmd pacman --color=always --noconfirm -S $sandbox_app; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
-  info 'Kernel hardening.'
-  newline
+  m_info 'Kernel hardening.'
+  __newline
   if [[ -n "$tcp_max_syn_backlog" ]]; then
-    info "Setting TCP SYN max backlog to $tcp_max_syn_backlog."
+    m_info "Setting TCP SYN max backlog to $tcp_max_syn_backlog."
     local file="/proc/sys/net/ipv4/tcp_max_syn_backlog"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo $tcp_max_syn_backlog | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$tcp_syn_cookie_prot" ]]; then
-    info 'Enabling TCP SYN cookie protection.'
+    m_info 'Enabling TCP SYN cookie protection.'
     local file="/proc/sys/net/ipv4/tcp_syncookies"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$tcp_rfc1337" ]]; then
-    info 'Enabling TCP rfc1337.'
+    m_info 'Enabling TCP rfc1337.'
     local file="/proc/sys/net/ipv4/tcp_rfc1337"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$log_martians" ]]; then
-    info 'Enabling martian packet logging.'
+    m_info 'Enabling martian packet logging.'
     local file="/proc/sys/net/ipv4/conf/default/log_martians"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/log_martians"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$icmp_echo_ignore_broadcasts" ]]; then
-    info 'Ignore echo broadcast requests.'
+    m_info 'Ignore echo broadcast requests.'
     local file="/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$icmp_ignore_bogus_error_responses" ]]; then
-    info 'Ignore bogus error responses.'
+    m_info 'Ignore bogus error responses.'
     local file="/proc/sys/net/ipv4/icmp_ignore_bogus_error_responses"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 1 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$send_redirects" ]]; then
-    info 'Disable sending redirects.'
+    m_info 'Disable sending redirects.'
     local file="/proc/sys/net/ipv4/conf/default/send_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/send_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$accept_redirects" ]]; then
-    info 'Disable accepting redirects.'
+    m_info 'Disable accepting redirects.'
     local file="/proc/sys/net/ipv4/conf/default/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv4/conf/all/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv6/conf/default/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
     file="/proc/sys/net/ipv6/conf/all/accept_redirects"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "echo 0 | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
-  info 'SSH hardening.'
-  newline
+  m_info 'SSH hardening.'
+  __newline
   if [[ -n "$ssh_require_key" ]] || \
     [[ -n "$ssh_deny_root_login" ]] || \
     [[ -n "$ssh_client" ]]; then
-    info 'Installing OpenSSH.'
+    m_info 'Installing OpenSSH.'
     if ! exec_cmd pacman --color=always --noconfirm -S $ssh_client; then
-      newline
+      __newline
       warn 'Failure'
     else
-      newline
+      __newline
       if [[ -n "$ssh_require_key" ]]; then
-        info 'Setting SSH keys as requirement.'
+        m_info 'Setting SSH keys as requirement.'
         local file="/etc/ssh/sshd_config"
         [[ -n "$test_script" ]] && file="/dev/null"
         if ! exec_cmd sed -i 's/^# *\(PasswordAuthentication\).*$/\1 no/g' "$file"; then
-          newline
+          __newline
           warn 'Failure'
         fi
-        newline
+        __newline
       fi
       if [[ -n "$ssh_deny_root_login" ]]; then
-        info 'Disabling root login.'
+        m_info 'Disabling root login.'
         local file="/etc/ssh/sshd_config"
         [[ -n "$test_script" ]] && file="/dev/null"
         if ! exec_cmd sed -i 's/^# *\(PermitRootLogin\).*$/\1 no/g' "$file"; then
-          newline
+          __newline
           warn 'Failure'
         fi
-        newline
+        __newline
       fi
     fi
   fi
-  info 'DNS hardening.'
-  newline
+  m_info 'DNS hardening.'
+  __newline
   if [[ -n "$install_dnssec" ]]; then
-    info 'Installing dnssec.'
+    m_info 'Installing dnssec.'
     if ! exec_cmd pacman --color=always --noconfirm -S ldns; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
   if [[ -n "$install_dnscrypt" ]]; then
-    info 'Installing dnscrypt.'
+    m_info 'Installing dnscrypt.'
     if ! exec_cmd pacman --color=always --noconfirm -S dnscrypt-proxy; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
-  info 'Proxy hardening.'
-  newline
+  m_info 'Proxy hardening.'
+  __newline
   if [[ -n "$install_dnsmasq" ]]; then
-    info 'Installing dnsmasq.'
+    m_info 'Installing dnsmasq.'
     if ! exec_cmd pacman --color=always --noconfirm -S dnsmasq; then
-      newline
+      __newline
       warn 'Failure'
     else
-      newline
-      info 'Enabling service.'
+      __newline
+      m_info 'Enabling service.'
       if ! exec_cmd systemctl enable dnsmasq.service; then
-        newline
+        __newline
         warn 'Failure'
       fi
     fi
-    newline
+    __newline
   fi
-  info 'Done.'
+  m_info 'Done.'
 }
 
 # 5.1.2
 function package_management() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.2 Package Management"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.2 Package Management"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.2.1 Pacman" \
       "5.1.2.2 Repositories" \
       "5.1.2.3 Mirrors" \
       "5.1.2.4 Arch Build System" \
       "5.1.2.5 Arch User Repository"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1360,8 +1413,8 @@ function package_management() {
           arch_user_repository
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1370,104 +1423,104 @@ function package_management() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Package Management. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Package Management. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.2.1
 function pacman_menu() {
-  prepare_pane
-  print_title "5.1.2.1 Pacman"
-  newline
-  info 'Nothing to do.'
+  __prepare_pane
+  __print_title "5.1.2.1 Pacman"
+  __newline
+  m_info 'Nothing to do.'
 }
 
 # 5.1.2.2
 function repositories() {
-  prepare_pane
-  print_title "5.1.2.2 Repositories"
-  newline
+  __prepare_pane
+  __print_title "5.1.2.2 Repositories"
+  __newline
   if [[ -n "$enable_multilib" ]]; then
-    info 'Enabling multilib.'
+    m_info 'Enabling multilib.'
     local file="/etc/pacman.conf"
     [[ -n "$test_script" ]] && file="/dev/null"
     if ! exec_cmd "cat $file | sed -z 's/#\(\[multilib\]\)\n#\(Include.*mirrorlist\)/\1\n\2/g' | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     else
       exec_cmd pacman -Sy
     fi
-    newline
+    __newline
   fi
-  info 'Running setup_unoff_usr_repo method:'
+  m_info 'Running setup_unoff_usr_repo method:'
   if ! exec_cmd setup_unoff_usr_repo; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
+  __newline
   if [[ -n "$install_pkgstats" ]]; then
-    info 'Installing pkgstats.'
+    m_info 'Installing pkgstats.'
     if ! exec_cmd pacman --color=always --noconfirm -S pkgstats; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
+    __newline
   fi
-  info 'Done.'
+  m_info 'Done.'
 }
 
 # 5.1.2.3
 function mirrors() {
-  prepare_pane
-  print_title "5.1.2.3 Mirrors"
-  newline
-  info 'Nothing to do.'
+  __prepare_pane
+  __print_title "5.1.2.3 Mirrors"
+  __newline
+  m_info 'Nothing to do.'
 }
 
 # 5.1.2.4
 function arch_build_system() {
-  prepare_pane
-  print_title "5.1.2.4 Arch Build System"
-  newline
-  info 'Nothing to do.'
+  __prepare_pane
+  __print_title "5.1.2.4 Arch Build System"
+  __newline
+  m_info 'Nothing to do.'
 }
 
 # 5.1.2.5
 function arch_user_repository() {
-  prepare_pane
-  print_title "5.1.2.5 Arch User Repository"
-  newline
+  __prepare_pane
+  __print_title "5.1.2.5 Arch User Repository"
+  __newline
   if [[ -n "$aur_helper" ]]; then
-    info 'Running install_aur_helper method:'
+    m_info 'Running install_aur_helper method:'
     install_aur_helper
     if ! check_retval $? ; then
-      newline
+      __newline
       error 'Failed.'
       return
     fi
   else
-    info 'No AUR helper specified. Please install AUR packages manually.'
+    m_info 'No AUR helper specified. Please install AUR packages manually.'
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.3
 function booting() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.3 Booting"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.3 Booting"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.3.1 Hardware auto-recognition" \
       "5.1.3.2 Microcode" \
       "5.1.3.3 Retaining boot messages" \
       "5.1.3.4 Num Lock activation"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1489,8 +1542,8 @@ function booting() {
           num_lock_activation
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1499,42 +1552,42 @@ function booting() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Booting. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Booting. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.3.1
 function hardware_auto_recognition() {
-  prepare_pane
-  print_title "5.1.3.1 Hardware auto-recognition"
-  newline
-  info 'Running setup_hardware_auto_recognition method:'
+  __prepare_pane
+  __print_title "5.1.3.1 Hardware auto-recognition"
+  __newline
+  m_info 'Running setup_hardware_auto_recognition method:'
   setup_hardware_auto_recognition
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.3.2
 function microcode() {
-  prepare_pane
-  print_title "5.1.3.2 Microcode"
-  newline
-  info 'Nothing to do. Done already.'
+  __prepare_pane
+  __print_title "5.1.3.2 Microcode"
+  __newline
+  m_info 'Nothing to do. Done already.'
 }
 
 # 5.1.3.3
 function retaining_boot_messages() {
-  prepare_pane
-  print_title "5.1.3.3 Retaining boot messages"
-  newline
+  __prepare_pane
+  __print_title "5.1.3.3 Retaining boot messages"
+  __newline
   if [[ -n "$retain_boot_msgs" ]]; then
-    info 'Creating service unit edit.'
+    m_info 'Creating service unit edit.'
     local file="/etc/systemd/system/getty@tty1.service.d/noclear.conf"
     if [[ -n "$test_script" ]]; then
       file="/dev/null"
@@ -1543,23 +1596,23 @@ function retaining_boot_messages() {
     fi
     if ! exec_cmd "echo \"[Service]
 TTYVTDisallocate=no\" | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   else
-    info 'Nothing to do.'
+    m_info 'Nothing to do.'
   fi
 }
 
 # 5.1.3.4
 function num_lock_activation() {
-  prepare_pane
-  print_title "5.1.3.4 Num Lock activation"
-  newline
+  __prepare_pane
+  __print_title "5.1.3.4 Num Lock activation"
+  __newline
   if [[ -n "$activate_numlock_on_boot" ]]; then
-    info 'Extending getty service.'
+    m_info 'Extending getty service.'
     local file="/etc/systemd/system/getty@tty1.service.d/activate-numlock.conf"
     if [[ -n "$test_script" ]]; then
       file="/dev/null"
@@ -1568,31 +1621,31 @@ function num_lock_activation() {
     fi
     if ! exec_cmd "echo \"[Service]
 ExecStartPre=/bin/sh -c 'setleds -D +num < /dev/%I'\" | tee $file"; then
-      newline
+      __newline
       warn 'Failure'
     fi
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   else
-    info 'Nothing to do.'
+    m_info 'Nothing to do.'
   fi
 }
 
 # 5.1.4
 function gui() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.4 Graphical User Interface"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.4 Graphical User Interface"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.4.1 Display server" \
       "5.1.4.2 Display drivers" \
       "5.1.4.3 Desktop environments" \
       "5.1.4.4 Window managers" \
       "5.1.4.5 Display manager"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1618,8 +1671,8 @@ function gui() {
           display_manager
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1628,117 +1681,117 @@ function gui() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Graphical User Interface. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Graphical User Interface. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.4.1
 function display_server() {
-  prepare_pane
-  print_title "5.1.4.1 Display server"
-  newline
+  __prepare_pane
+  __print_title "5.1.4.1 Display server"
+  __newline
   case "$disp_server" in
     xorg)
-      info 'Installing Xorg:'
+      m_info 'Installing Xorg:'
       if ! exec_cmd pacman --color=always --noconfirm -S xorg; then
-        newline
+        __newline
         warn 'Failure'
       fi
       ;;
     wayland)
-      info 'Installing Wayland:'
+      m_info 'Installing Wayland:'
       if ! exec_cmd pacman --color=always --noconfirm -S weston; then
-        newline
+        __newline
         warn 'Failure'
       fi
       ;;
       *)
-      info "No instruction found for $disp_server."
+      m_info "No instruction found for $disp_server."
   esac
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.4.2
 function display_drivers() {
-  prepare_pane
-  print_title "5.1.4.2 Display drivers"
-  newline
-  info 'Running install_display_drivers method:'
+  __prepare_pane
+  __print_title "5.1.4.2 Display drivers"
+  __newline
+  m_info 'Running install_display_drivers method:'
   install_display_drivers
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.4.3
 function desktop_environments() {
-  prepare_pane
-  print_title "5.1.4.3 Desktop environments"
-  newline
-  info 'Running install_de method:'
+  __prepare_pane
+  __print_title "5.1.4.3 Desktop environments"
+  __newline
+  m_info 'Running install_de method:'
   install_de
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.4.4
 function window_managers() {
-  prepare_pane
-  print_title "5.1.4.4 Window managers"
-  newline
-  info 'Running install_wm method:'
+  __prepare_pane
+  __print_title "5.1.4.4 Window managers"
+  __newline
+  m_info 'Running install_wm method:'
   install_wm
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.4.5
 function display_manager() {
-  prepare_pane
-  print_title "5.1.4.5 Display manager"
-  newline
-  info 'Running install_dm method:'
+  __prepare_pane
+  __print_title "5.1.4.5 Display manager"
+  __newline
+  m_info 'Running install_dm method:'
   install_dm
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.5
 function power_management() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.5 Power management"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.5 Power management"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.5.1 ACPI events" \
       "5.1.5.2 CPU frequency scaling" \
       "5.1.5.3 Laptops" \
       "5.1.5.4 Suspend and Hibernate"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1760,8 +1813,8 @@ function power_management() {
           suspend_and_hibernate
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1770,101 +1823,101 @@ function power_management() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Power Management. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Power Management. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.5.1
 function acpi_events() {
-  prepare_pane
-  print_title "5.1.5.1 ACPI events"
-  newline
+  __prepare_pane
+  __print_title "5.1.5.1 ACPI events"
+  __newline
   if [[ -n "$install_acpid" ]]; then
-    info 'Installing acpid.'
+    m_info 'Installing acpid.'
     if ! exec_cmd pacman --color=always --noconfirm -S acpid; then
-      newline
+      __newline
       warn 'Failure'
     else
       if ! exec_cmd systemctl enable acpid.service; then
-        newline
+        __newline
         warn 'Failure'
       fi
     fi
-    newline
+    __newline
   fi
-  info 'Executing the setup_acpi method:'
+  m_info 'Executing the setup_acpi method:'
   if ! exec_cmd setup_acpi; then
-    newline
-    error "Couldn't run command."
+    __newline
+    m_error "Couldn't run command."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
 }
 
 # 5.1.5.2
 function cpu_frequency_scaling() {
-  prepare_pane
-  print_title "5.1.5.2 CPU frequency scaling"
-  newline
-  info 'Running setup_cpu_freq_scal method:'
+  __prepare_pane
+  __print_title "5.1.5.2 CPU frequency scaling"
+  __newline
+  m_info 'Running setup_cpu_freq_scal method:'
   setup_cpu_freq_scal
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.5.3
 function laptops() {
-  prepare_pane
-  print_title "5.1.5.3 Laptops"
-  newline
-  info 'Running setup_laptop method:'
+  __prepare_pane
+  __print_title "5.1.5.3 Laptops"
+  __newline
+  m_info 'Running setup_laptop method:'
   setup_laptop
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.5.4
 function suspend_and_hibernate() {
-  prepare_pane
-  print_title "5.1.5.4 Suspend and Hibernate"
-  newline
-  info 'Running setup_susp_and_hiber method:'
+  __prepare_pane
+  __print_title "5.1.5.4 Suspend and Hibernate"
+  __newline
+  m_info 'Running setup_susp_and_hiber method:'
   setup_susp_and_hiber
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.6
 function multimedia() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.6 Multimedia"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.6 Multimedia"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.6.1 Sound" \
       "5.1.6.2 Browser plugins" \
       "5.1.6.3 Codecs"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1882,8 +1935,8 @@ function multimedia() {
           codecs
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1892,74 +1945,74 @@ function multimedia() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Multimedia. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Multimedia. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.6.1
 function sound() {
-  prepare_pane
-  print_title "5.1.6.1 Sound"
-  newline
-  info 'Running setup_sound method:'
+  __prepare_pane
+  __print_title "5.1.6.1 Sound"
+  __newline
+  m_info 'Running setup_sound method:'
   setup_sound
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.6.2
 function browser_plugins() {
-  prepare_pane
-  print_title "5.1.6.2 Browser plugins"
-  newline
-  info 'Running setup_browser_plugins method:'
+  __prepare_pane
+  __print_title "5.1.6.2 Browser plugins"
+  __newline
+  m_info 'Running setup_browser_plugins method:'
   setup_browser_plugins
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.6.3
 function codecs() {
-  prepare_pane
-  print_title "5.1.6.3 Codecs"
-  newline
-  info 'Running setup_codecs method:'
+  __prepare_pane
+  __print_title "5.1.6.3 Codecs"
+  __newline
+  m_info 'Running setup_codecs method:'
   setup_codecs
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.7
 function networking() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.7 Networking"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.7 Networking"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.7.1 Clock synchronization" \
       "5.1.7.2 DNS security" \
       "5.1.7.3 Setting up a firewall" \
       "5.1.7.4 Resource sharing"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -1981,8 +2034,8 @@ function networking() {
           resource_sharing
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -1991,82 +2044,82 @@ function networking() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Networking. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Networking. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.7.1
 function clock_synchronization() {
-  prepare_pane
-  print_title "5.1.7.1 Clock synchronization"
-  newline
-  info 'Running setup_clock_sync method:'
+  __prepare_pane
+  __print_title "5.1.7.1 Clock synchronization"
+  __newline
+  m_info 'Running setup_clock_sync method:'
   setup_clock_sync
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.7.2
 function dns_security() {
-  prepare_pane
-  print_title "5.1.7.2 DNS security"
-  newline
-  info 'Running setup_dns_sec method:'
+  __prepare_pane
+  __print_title "5.1.7.2 DNS security"
+  __newline
+  m_info 'Running setup_dns_sec method:'
   setup_dns_sec
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.7.3
 function setting_up_a_firewall() {
-  prepare_pane
-  print_title "5.1.7.3 Setting up a firewall"
-  newline
-  info 'Running setup_firewall method:'
+  __prepare_pane
+  __print_title "5.1.7.3 Setting up a firewall"
+  __newline
+  m_info 'Running setup_firewall method:'
   setup_firewall
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.7.4
 function resource_sharing() {
-  prepare_pane
-  print_title "5.1.7.4 Resource sharing"
-  newline
-  info 'Nothing to do.'
+  __prepare_pane
+  __print_title "5.1.7.4 Resource sharing"
+  __newline
+  m_info 'Nothing to do.'
 }
 
 
 # 5.1.8
 function input_devices() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.8 Input devices"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.8 Input devices"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.8.1 Keyboard layouts" \
       "5.1.8.2 Mouse buttons" \
       "5.1.8.3 Laptop touchpads" \
       "5.1.8.4 TrackPoints"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2088,8 +2141,8 @@ function input_devices() {
           trackpoints
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2098,91 +2151,91 @@ function input_devices() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Input devices. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Input devices. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.8.1
 function keyboard_layouts() {
-  prepare_pane
-  print_title "5.1.8.1 Keyboard layouts"
-  newline
+  __prepare_pane
+  __print_title "5.1.8.1 Keyboard layouts"
+  __newline
   if ! exec_cmd localectl set-x11-keymap \
     "\"$x11_keymap_layout\"" \
     "\"$x11_keymap_model\"" \
     "\"$x11_keymap_variant\"" \
     "\"$x11_keymap_options\"" ; then
-    newline
-    error "Couldn't set keyboard layouts."
+    __newline
+    m_error "Couldn't set keyboard layouts."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
 }
 
 # 5.1.8.2
 function mouse_buttons() {
-  prepare_pane
-  print_title "5.1.8.2 Mouse buttons"
-  newline
-  info 'Running setup_mouse method:'
+  __prepare_pane
+  __print_title "5.1.8.2 Mouse buttons"
+  __newline
+  m_info 'Running setup_mouse method:'
   setup_mouse
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.8.3
 function laptop_touchpads() {
-  prepare_pane
-  print_title "5.1.8.3 Laptop touchpads"
-  newline
-  info 'Running setup_touchpad method:'
+  __prepare_pane
+  __print_title "5.1.8.3 Laptop touchpads"
+  __newline
+  m_info 'Running setup_touchpad method:'
   setup_touchpad
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.8.4
 function trackpoints() {
-  prepare_pane
-  print_title "5.1.8.4 TrackPoints"
-  newline
-  info 'Running setup_trackpoints method:'
+  __prepare_pane
+  __print_title "5.1.8.4 TrackPoints"
+  __newline
+  m_info 'Running setup_trackpoints method:'
   setup_trackpoints
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.9
 function optimization() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.9 Optimization"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.9 Optimization"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.9.1 Benchmarking" \
       "5.1.9.2 Improving performance" \
       "5.1.9.3 Solid state drives"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2200,8 +2253,8 @@ function optimization() {
           solid_state_drives
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2210,73 +2263,73 @@ function optimization() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Optimization. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Optimization. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.9.1
 function benchmarking() {
-  prepare_pane
-  print_title "5.1.9.1 Benchmarking"
-  newline
-  info 'Running setup_benchmarking method:'
+  __prepare_pane
+  __print_title "5.1.9.1 Benchmarking"
+  __newline
+  m_info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.9.2
 function improving_performance() {
-  prepare_pane
-  print_title "5.1.9.2 Improving performance"
-  newline
-  info 'Running setup_benchmarking method:'
+  __prepare_pane
+  __print_title "5.1.9.2 Improving performance"
+  __newline
+  m_info 'Running setup_benchmarking method:'
   setup_benchmarking
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.9.3
 function solid_state_drives() {
-  prepare_pane
-  print_title "5.1.9.3 Solid state drives"
-  newline
-  info 'Running setup_ssd method:'
+  __prepare_pane
+  __print_title "5.1.9.3 Solid state drives"
+  __newline
+  m_info 'Running setup_ssd method:'
   setup_ssd
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.10
 function system_service() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.10 System service"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.10 System service"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.10.1 File index and search" \
       "5.1.10.2 Local mail delivery" \
       "5.1.10.3 Printing"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2294,8 +2347,8 @@ function system_service() {
           printing
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2304,72 +2357,72 @@ function system_service() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In System service. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In System service. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.10.1
 function file_index_and_search() {
-  prepare_pane
-  print_title "5.1.10.1 File index and search"
-  newline
-  info 'Running setup_file_index_and_search method:'
+  __prepare_pane
+  __print_title "5.1.10.1 File index and search"
+  __newline
+  m_info 'Running setup_file_index_and_search method:'
   setup_file_index_and_search
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.10.2
 function local_mail_delivery() {
-  prepare_pane
-  print_title "5.1.10.2 Local mail delivery"
-  newline
-  info 'Running setup_mail method:'
+  __prepare_pane
+  __print_title "5.1.10.2 Local mail delivery"
+  __newline
+  m_info 'Running setup_mail method:'
   setup_mail
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.10.3
 function printing() {
-  prepare_pane
-  print_title "5.1.10.3 Printing"
-  newline
-  info 'Running setup_printing method:'
+  __prepare_pane
+  __print_title "5.1.10.3 Printing"
+  __newline
+  m_info 'Running setup_printing method:'
   setup_printing
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.11
 function appearance() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.11 Appearance"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.11 Appearance"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.11.1 Fonts" \
       "5.1.11.2 GTK+ and Qt themes"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2383,8 +2436,8 @@ function appearance() {
           gtkp_and_qt_themes
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2393,50 +2446,50 @@ function appearance() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Appearance. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Appearance. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.11.1
 function fonts() {
-  prepare_pane
-  print_title "5.1.11.1 Fonts"
-  newline
-  info 'Running setup_fonts method:'
+  __prepare_pane
+  __print_title "5.1.11.1 Fonts"
+  __newline
+  m_info 'Running setup_fonts method:'
   setup_fonts
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.11.2
 function gtkp_and_qt_themes() {
-  prepare_pane
-  print_title "5.1.11.2 GTK+ and Qt themes"
-  info 'Running setup_gtk_qt method:'
+  __prepare_pane
+  __print_title "5.1.11.2 GTK+ and Qt themes"
+  m_info 'Running setup_gtk_qt method:'
   setup_gtk_qt
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
 # 5.1.12
 function console_improvements() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.1.12 Console improvements"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to General Recommendations" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.1.12 Console improvements"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to General Recommendations" \
       "5.1.12.1 Tab-completion enhancements" \
       "5.1.12.2 Aliases" \
       "5.1.12.3 Alternative shells" \
@@ -2449,8 +2502,8 @@ function console_improvements() {
       "5.1.12.10 Scrollback buffer" \
       "5.1.12.11 Session management"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2500,8 +2553,8 @@ function console_improvements() {
           session_management
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2510,184 +2563,184 @@ function console_improvements() {
       pause
       break
     done
-    pop suggestions suggestion
-    trace "In Console improvements. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Console improvements. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.1.12.1
 function tab_completion_enhancements() {
-  prepare_pane
-  print_title "5.1.12.1 Tab-completion enhancements"
-  newline
-  info 'Running setup_tab_completion method:'
+  __prepare_pane
+  __print_title "5.1.12.1 Tab-completion enhancements"
+  __newline
+  m_info 'Running setup_tab_completion method:'
   setup_tab_completion
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.2
 function aliases() {
-  prepare_pane
-  print_title "5.1.12.2 Aliases"
-  newline
-  info 'Running setup_aliases method:'
+  __prepare_pane
+  __print_title "5.1.12.2 Aliases"
+  __newline
+  m_info 'Running setup_aliases method:'
   setup_aliases
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.3
 function alternative_shells() {
-  prepare_pane
-  print_title "5.1.12.3 Alternative shells"
-  info 'Running setup_alt_shell method:'
+  __prepare_pane
+  __print_title "5.1.12.3 Alternative shells"
+  m_info 'Running setup_alt_shell method:'
   setup_alt_shell
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.4
 function bash_additions() {
-  prepare_pane
-  print_title "5.1.12.4 Bash additions"
-  newline
-  info 'Running setup_bash_additions method:'
+  __prepare_pane
+  __print_title "5.1.12.4 Bash additions"
+  __newline
+  m_info 'Running setup_bash_additions method:'
   setup_bash_additions
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.5
 function colored_output() {
-  prepare_pane
-  print_title "5.1.12.5 Colored output"
-  newline
-  info 'Running setup_colored_output method:'
+  __prepare_pane
+  __print_title "5.1.12.5 Colored output"
+  __newline
+  m_info 'Running setup_colored_output method:'
   setup_colored_output
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.6
 function compressed_files() {
-  prepare_pane
-  print_title "5.1.12.6 Compressed files"
-  newline
-  info 'Running setup_compressed_files method:'
+  __prepare_pane
+  __print_title "5.1.12.6 Compressed files"
+  __newline
+  m_info 'Running setup_compressed_files method:'
   setup_compressed_files
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.7
 function console_prompt() {
-  prepare_pane
-  print_title "5.1.12.7 Console prompt"
-  newline
-  info 'Running setup_console_prompt method:'
+  __prepare_pane
+  __print_title "5.1.12.7 Console prompt"
+  __newline
+  m_info 'Running setup_console_prompt method:'
   setup_console_prompt
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.8
 function emacs_shell() {
-  prepare_pane
-  print_title "5.1.12.8 Emacs shell"
-  newline
-  info 'Running setup_emacs_shell method:'
+  __prepare_pane
+  __print_title "5.1.12.8 Emacs shell"
+  __newline
+  m_info 'Running setup_emacs_shell method:'
   setup_emacs_shell
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.9
 function mouse_support() {
-  prepare_pane
-  print_title "5.1.12.9 Mouse support"
-  newline
-  info 'Running setup_mouse_support method:'
+  __prepare_pane
+  __print_title "5.1.12.9 Mouse support"
+  __newline
+  m_info 'Running setup_mouse_support method:'
   setup_mouse_support
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.10
 function scrollback_buffer() {
-  prepare_pane
-  print_title "5.1.12.10 Scrollback buffer"
-  newline
-  info 'Running setup_scrollback_buffer method:'
+  __prepare_pane
+  __print_title "5.1.12.10 Scrollback buffer"
+  __newline
+  m_info 'Running setup_scrollback_buffer method:'
   setup_scrollback_buffer
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 # 5.1.12.11
 function session_management() {
-  prepare_pane
-  print_title "5.1.12.11 Session management"
-  newline
-  info 'Running setup_session_management method:'
+  __prepare_pane
+  __print_title "5.1.12.11 Session management"
+  __newline
+  m_info 'Running setup_session_management method:'
   setup_session_management
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 
@@ -2695,11 +2748,11 @@ function session_management() {
 function applications() {
   install_packages
   return
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.2 Applications"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.2 Applications"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Post-Installation" \
       "5.2.1 Internet" \
       "5.2.2 Multimedia" \
       "5.2.3 Utilities" \
@@ -2708,8 +2761,8 @@ function applications() {
       "5.2.6 Science" \
       "5.2.7 Others"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2743,8 +2796,8 @@ function applications() {
           others
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2752,18 +2805,18 @@ function applications() {
       esac
       break
     done
-    pop suggestions suggestion
-    trace "In Applications. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Applications. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 # 5.2.1
 function internet() {
-  local -i suggestion=1
+  SUGGESTION=1
   while : ; do
-    prepare_pane
-    [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]] && print_title "5.2.1 Internet"
-    [[ -z "$run_through" ]] && choose_enumerated_option "Return to Post-Installation" \
+    __prepare_pane
+    [[ -z "$run_through" ]] || [[ $SUGGESTION -eq 1 ]] && __print_title "5.2.1 Internet"
+    [[ -z "$run_through" ]] && choose_from_enumeration "Return to Post-Installation" \
       "5.2.1.1 Network connection" \
       "5.2.1.2 Web browsers" \
       "5.2.1.3 Web servers" \
@@ -2773,8 +2826,8 @@ function internet() {
       "5.2.1.7 News, RSS, and blogs" \
       "5.2.1.8 Remote desktop"
     while : ; do
-      answer=$suggestion
-      [[ -z "$run_through" ]] && read_answer "Enter option [$suggestion]: " answer $suggestion
+      answer=$SUGGESTION
+      [[ -z "$run_through" ]] && __read_answer "Enter option [$SUGGESTION]: " answer $SUGGESTION
       case "$answer" in
         0)
           return
@@ -2812,8 +2865,8 @@ function internet() {
           remote_desktop
           ;;
         *)
-          newline
-          error "Please choose an option from above."
+          __newline
+          m_error "Please choose an option from above."
           tput rc
           tput dl 2
           continue
@@ -2821,92 +2874,69 @@ function internet() {
       esac
       break
     done
-    pop suggestions suggestion
-    trace "In Internet. Next suggestion: $suggestion."
+    pop suggestions SUGGESTION
+    trace "In Internet. Next SUGGESTION: $SUGGESTION."
   done
 }
 
 
 # 5.2.X
 install_packages() {
-  prepare_pane
-  print_title "5.2.X Applications (not yet completed)"
-  newline
-  info 'Installing packages:'
+  __prepare_pane
+  __print_title "5.2.X Applications (not yet completed)"
+  __newline
+  m_info 'Installing packages:'
   if ! exec_cmd pacman --color=always -S ${packages[*]}; then
-    newline
-    error "Couldn't install packages."
+    __newline
+    m_error "Couldn't install packages."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
-  info 'Installing AUR packages:'
+  m_info 'Installing AUR packages:'
   if ! exec_cmd $aur_helper --color=always -S ${aur_packages[*]}; then
-    newline
-    error "Couldn't install packages."
+    __newline
+    m_error "Couldn't install packages."
   else
-    newline
-    info 'Done.'
+    __newline
+    m_info 'Done.'
   fi
-  newline
-  info 'Running aftermath method:'
+  __newline
+  m_info 'Running aftermath method:'
   aftermath
   if ! check_retval $? ; then
-    newline
+    __newline
     error 'Failed.'
     return
   fi
-  newline
-  info 'Done.'
+  __newline
+  m_info 'Done.'
 }
 
 #################################################
 # Helpers
 
 function pause() {
-    [[ -n "$post_prompt" ]] && read
+    [[ -n "$post_prompt" ]] && tput cuf $OFFSET && read
 }
-function newline() {
-    tput cud1
-    tput hpa $left
+function __newline() {
+    echo
+    tput cuf $left
 }
-declare -a levels=()
-function print_title() {
+function __print_title() {
   local title="$1"
-  [[ -z "$run_through" ]] && newline
-  newline
+  [[ -z "$run_through" ]] && __newline
+  __newline
   local IFS='.'
   printf '%s' "${FG_WHITE}${UNDERLINE}${BOLD}$1${RESET}"
   IFS=' '
   trace "Printed title: '$1'"
-  newline
+  __newline
 }
-function list_options() {
-  local -i maxwidth=$(($(tput cols)-left-2))
-  local -i width=0
-  local first=1
-  local option
-  trace "Printing ${#options[@]} options."
-  newline
-  for option in "${options[@]}"; do
-    width=$((width+${#option}+2))
-    if [[ -n "$first" ]]; then
-      first=""
-    else
-      printf '%s' ', '
-    fi
-    if ((width >= maxwidth)); then
-      newline
-      width=${#option}
-    fi
-    printf '%s' "$option"
-  done
-  newline
-}
-function read_answer() {
+function __read_answer() {
   trace "Reading answer."
   tput sc
-  newline
+  __newline
   printf "$1"
   local _answer
   read _answer
@@ -2917,19 +2947,18 @@ function read_answer() {
   debug "Read answer: $2='$(eval "echo "\$$2"")'"
 }
 function exec_cmd() {
-  debug "Executing: $*"
-  newline
-  tput cuu1
-  echo " ${BOLD}${FG_RED}\$ ${RESET}${BOLD}$*${RESET}"
+  debug "$*"
+  tput cuf $OFFSET
+  echo " ${CODE}${FG_LBLUE}${BOLD}\$ ${CODE}$*${RESET}"
   if [[ -n "$NO_PIPE" ]]; then
-    eval "$*"
+    OFFSET=$OFFSET_NORMAL eval "$*"
   else
-    eval "$*" 2>&1 | nl -w $left -b a -s':' | sed "s/^..\{$left\}/${BG_LGRAY}${FG_BLACK}\0${RESET}/g"
+    OFFSET=$OFFSET_NORMAL eval "$*" 2>&1 | nl -w $OFFSET -b a -s' ' | sed "s/^..\{$OFFSET\}/${BG_GRAY}${FG_BLACK}\0${RESET}/g"
   fi
   local retval=$(check_retval ${PIPESTATUS[0]})
   return $retval
 }
-function prepare_pane() {
+function __prepare_pane() {
   if [[ -n "$run_through" ]]; then
     left=$(((${#FUNCNAME[@]}-3)*2))
     [[ -n "$test_script" ]] && ((left--))
@@ -2937,199 +2966,322 @@ function prepare_pane() {
     tput clear
   fi
 }
+function enter_menu() { # title_of_menu
+  # Update suggestion
+  [[ -n "$SUGGESTION" ]] && push suggestions "$SUGGESTION"
+  # Update title
+  [[ -n "$TITLE" ]] && push titles "$TITLE"
+  TITLE="$1"
+  # Update level
+  [[ -n "$NEXTLEVEL" ]] && push levels "$NEXTLEVEL"
+  LEVEL=$NEXTLEVEL
+  NEXTLEVEL=
+  # Update menu string
+  [[ -n "$MENU_STRING" ]] && push menu_strings "$MENU_STRING"
+  MENU_STRING="$TITLE"
+  local level_string=$(_get_level_string)
+  [[ -n "$level_string" ]] && MENU_STRING="$level_string $MENU_STRING"
+  # Update indentation level
+  _update_indentation 0
+
+  # Reset variables
+  OPTIONS=()
+  TAB_COMPLETIONS=()
+  SUGGESTION=1
+  MENU_DRAWN=
+
+  trace "Entered menu '$MENU_STRING'. TITLE='$TITLE', LEVEL='$LEVEL', MENU_STRING='$MENU_STRING'"
+}
+function _get_level_string() {
+  local -i i
+  local level_string
+  for ((i=0;i<${#levels[@]};i++)); do
+    level_string="$level_string.${levels[$i]}"
+  done
+  echo "${level_string#?}"
+}
+function _update_indentation() { # subtract(When we leave => OFFSET)
+  if [[ -n "$run_through" ]]; then
+    local -i nesting=$(((${#FUNCNAME[@]}-1)/3-1-$1))
+    #[[ -n "$test_script" ]] && ((nesting--))
+    OFFSET=$((nesting*2+OFFSET_RUNTHROUGH_MIN))
+  else
+    OFFSET=$OFFSET_NORMAL
+  fi
+}
 function draw_menu() {
-  local title=$(_get_current_title)
   if [[ -z "$run_through" ]]; then
     tput clear
-    tput cup 2 $_OFFSET
+    tput cup 2 $OFFSET
   else
-    tput cud1
-    tput hpa $_OFFSET
+    #echo # tput cud's don't work when at the bottom of the terminal
+    tput cuf $OFFSET
   fi
-  if [[ -z "$run_through" ]] || [[ $suggestion -eq 1 ]]; then
-    printf '%s' "${FG_WHITE}${UNDERLINE}${BOLD}$title${RESET}"
-    trace "Drawn menu: '$title'"
-    tput cud 2
-    tput hpa $_OFFSET
+  if [[ -z "$MENU_DRAWN" ]] || [[ -z "$run_through" ]]; then
+    printf '%s' "${FG_LBLUE}${UNDERLINE}${BOLD}$MENU_STRING${RESET}"
+    trace "Drawn menu: '$MENU_STRING'"
+    echo
+    echo
   fi
-}
-function enter_menu() { # title_of_menu
-  local title="$1"
-  _LEVEL=$((${#FUNCNAME[@]}-3))
-  [[ -n "$test_script" ]] && _LEVEL=$((_LEVEL-1))
-  push menu_levels $_LEVEL
-  if [[ -n "$run_through" ]]; then
-    _OFFSET=$((_LEVEL*2+_MINOFFSETRUN))
-  else
-    _OFFSET=$((_LEVEL*2+_MINOFFSETNORMAL))
-  fi
-  _LEVELSTR=''
-  for ((level=1;level<${#menu_levels[@]};level++)); do
-    _LEVELSTR="$_LEVELSTR.${menu_levels[$level]}"
-  done
-  [[ -n "$_LEVELSTR" ]] && title="${_LEVELSTR:1:${#_LEVELSTR}} $title"
-  push menus "$title"
-  trace "Entered menu '$title'."
+  MENU_DRAWN=1
 }
 function leave_menu() {
-  pop levels _LEVEL
-  local title
-  local titles
-  pop menus title
-  trace "Left menu '$title'."
+  # Update suggestion
+  pop suggestions SUGGESTION
+  # Update title
+  pop titles TITLE
+  # Update level
+  pop levels LEVEL
+  NEXTLEVEL=
+  # Update menu string
+  pop menu_strings MENU_STRING
+  
+  # Tell the user
+  m_info "${FG_CYAN}Returning to ${FG_LCYAN}$TITLE${FG_CYAN}.${RESET}"
+  pause
+
+  # Update indentation level
+  _update_indentation 1
 }
-function choose_enumerated_option() {
-  local -i suggestion="$1"
+function choose_submenu() {
+  TAB_COMPLETIONS=()
+  local -i index
+  for ((index=1;index<=${#OPTIONS[@]};index++)); do
+    if [[ "$SUGGESTION" == "${OPTIONS[$((index-1))]}" ]]; then
+      SUGGESTION=$index
+    fi
+    TAB_COMPLETIONS+=($index)
+  done
+  if _has_parent_menu; then
+    TAB_COMPLETIONS+=('r')
+    OPTIONS+=("${FG_CYAN}Return to ${FG_LCYAN}$(_get_parent_menu)${RESET}")
+  fi
+  TAB_COMPLETIONS+=('q')
+  OPTIONS+=("${FG_LRED}Quit${RESET}")
+  if [[ -n "$run_through" ]]; then
+    evaluate_submenu_choice $SUGGESTION
+    return $?
+  fi
+  enumerate_options
+  echo
   local choice
-  local -a map
-  if [[ -z "$_SKIPCHOICE" ]] || [[ -z "$run_through" ]]; then
-    tput sc
+  choose choice
+  evaluate_submenu_choice $choice
+}
+function choose_from_enumeration() { # choice(out)
+  local choice_pntr="$1"
+  local choice_val
+  if [[ -z "$SKIPCHOICE" ]] || [[ -z "$run_through" ]]; then
     local first=1
-    while ! _validate_choice $choice; do
-      tput rc # Only redraw from beginning of list
+    while ! _validate_choice $choice_val; do
+      tput vpa 4 # Beware: Fragile
+      tput cuf $OFFSET
       _print_enumerated_options
       if [[ -z "$first" ]]; then
-        tput hpa $_OFFSET
-        error "Error: '$choice' is not an option. Please choose one of the options."
+        tput cuf $OFFSET
+        m_error "Error: '$choice_val' is not an option. Please choose one of the options."
         tput cuu1
       fi
-      tput cud1
+      echo
       tput dl 3 # in case the user writes a ", we need to delete the error msg.
-      _read_choice $suggestion choice
+      _read_choice choice_val
       first=
     done
   else # Assume run_through
-    choice="$suggestion"
+    choice_val="$SUGGESTION"
   fi
-  # Evaluate valid choice
-  case "$choice" in
+  eval "$choice_pntr='$choice_val'"
+}
+function print_is_suggestion_prefix() { # current_option
+  [[ -z "$1" ]] || [[ "$SUGGESTION" == "$1" ]] && printf "${FG_YELLOW}"
+}
+function list_options() {
+  local -i maxwidth=$(($(tput cols)-OFFSET))
+  local -i width=0
+  local first=1
+  local option
+  tput cuf $OFFSET
+  for option in "${OPTIONS[@]}"; do
+    width=$((width+${#option}))
+    if [[ -n "$first" ]]; then
+      first=
+    else
+      ((width < maxwidth)) && printf ' '
+      ((width++))
+    fi
+    #echo "$(tput cuf 2)Width: $width/$maxwidth"
+    if ((width > maxwidth)); then
+      echo
+      tput cuf $OFFSET
+      width=$((${#option}+1))
+    fi
+    printf "$(print_is_suggestion_prefix "$option")$option${RESET}"
+  done
+  echo
+}
+function enumerate_options() {
+  local -i char_maxwidth=0
+  local tab_comp
+  for tab_comp in "${TAB_COMPLETIONS[@]}"; do
+    ((char_maxwidth<${#tab_comp})) && char_maxwidth=${#tab_comp}
+  done
+  local -i _index=1
+  for ((_index=0;_index<${#OPTIONS[@]};_index++)); do
+    local option_char="${TAB_COMPLETIONS[$_index]}"
+    local option="${OPTIONS[$_index]}"
+    print_enumerated_option "$option_char" $char_maxwidth "$option"
+  done
+}
+function print_enumerated_option() { # key, keymaxwidth, option
+  local key="$1"
+  local -i keymaxwidth=$2
+  local option="$3"
+  tput cuf $OFFSET
+  printf "${FG_GRAY}[${FG_LBLUE}"
+  print_is_suggestion_prefix "$key"
+  printf "$key"
+  if ((${#key}<keymaxwidth)); then
+    printf "%*.${keymaxwidth}s" $((${#key}-keymaxwidth)) ' '
+  fi
+  printf "${FG_GRAY}] ${FG_LBLUE}"
+  print_is_suggestion_prefix "$key"
+  printf "$3${RESET}\n"
+}
+function choose() { # choice(out)
+  local choice_pntr="$1"
+  local choice_val
+  if [[ -z "$SKIPCHOICE" ]] || [[ -z "$run_through" ]]; then
+    local first=1
+    tput cuf $OFFSET
+    tput sc
+    while : ; do
+      tput rc
+      tput dl 3 # in case the user writes a ", we need to delete the error msg.
+      if [[ -z "$first" ]]; then
+        echo
+        m_error "Error: '$choice_val' is not an option. Please choose one of the options."
+        tput cuu 2
+      fi
+      _read_choice choice_val
+      [[ -z "$choice_val" ]] && choice_val="$SUGGESTION"
+
+      first=
+      _validate_choice $choice_val && break
+    done
+  else # Assume run_through
+    choice_val="$SUGGESTION"
+  fi
+  eval "$choice_pntr='$choice_val'"
+}
+function _validate_choice() { # choice
+  local choice="$1"
+  for option in "${TAB_COMPLETIONS[@]}"; do
+    [[ "$option" == "$choice" ]] && return $EX_OK
+  done
+  return $EX_ERR
+}
+function _read_choice() { # choice(out)
+  local _choice_pntr="$1"
+  local _choice_val
+  enable_tab_completion
+  read -erp "$(tput hpa $OFFSET)${FG_WHITE}Enter choice ${FG_GRAY}[$(print_is_suggestion_prefix $SUGGESTION)$SUGGESTION${RESET}${FG_GRAY}]${RESET}: " _choice_val
+  clean_tab_suggestions
+  disable_tab_completion
+  [[ -z "$_choice_val" ]] && _choice_val="$SUGGESTION"
+  eval "$_choice_pntr='$_choice_val'"
+}
+function evaluate_submenu_choice() { # choice
+  local _choice_val="$1"
+  case "$_choice_val" in
     r)
-      leave_menu
-      return
+      return $EX_ERR
       ;;
     q)
-      leave_menu
       exit $EX_OK
       ;;
     *)
-      local -i number=$choice
-      local next_menu="${map[$choice]}"
-      local next_method="${options[$next_menu]}"
-      local next_suggestion=$(_get_next_suggestion $number)
-      trace "Chose $number: '$next_menu'. Executing: $next_method"
-      push suggestions $next_suggestion
+      NEXTLEVEL=$_choice_val
+      local next_menu="${OPTIONS[$(($NEXTLEVEL-1))]}"
+      local next_method="$(printf "$next_menu" | tr '[:upper:]' '[:lower:]' | sed -e 's/-\|\s/_/g')"
+      SUGGESTION=$(_get_next_suggestion $_choice_val)
+      trace "Chose $NEXTLEVEL: '$next_menu'. Executing: $next_method. Next suggestion: $SUGGESTION"
       $next_method
-      pop suggestions suggestion
       ;;
   esac
 }
-function _validate_choice() { # choice
-  local _choice="$1"
-  if [ $_choice -eq $_choice 2> /dev/null ]; then
-    local -i number=$_choice
-    if ((number>0 && number<=${#options[@]})); then
-      return $EX_OK
-    else
-      return $EX_ERR
-    fi
-  else
-    if _has_parent_node && [[ "$_choice" == "r" ]] || [[ "$_choice" == "q" ]]; then
-      return $EX_OK
-    else
-      return $EX_ERR
-    fi
-  fi
+function tab_prefix() { tput cuf $OFFSET; printf "${FG_WHITE}"; }
+function _get_next_suggestion() { # old_suggestion
+  case $1 in
+    r|g)
+      if _has_parent_menu; then
+        echo "r"
+      else
+        echo "q"
+      fi
+      ;;
+    *)
+      local candidate=$(($1+1))
+      local -i _index
+      for ((_index=1;_index<=${#TAB_COMPLETIONS[@]};_index++)); do
+        if [[ "$candidate" == "${TAB_COMPLETIONS[$((_index-1))]}" ]]; then
+          echo "$candidate"
+          return
+        fi
+      done
+      if _has_parent_menu; then
+        echo "r"
+      else
+        echo "q"
+      fi
+      ;;
+  esac
 }
-function _print_enumerated_options() {
-  local _option
-  local optionstr
-  local -i i=1
-  for _option in "${!options[@]}"; do
-    map+=([$i]="$_option")
-    _option="${_option:4:${#_option}}"
-    local level="$i"
-    [[ -n "$_LEVELSTR" ]] && level="$_LEVELSTR.$level"
-    echo "[$i] $level $_option"
-    optionstr="$optionstr, '$_option'"
-    tput hpa $_OFFSET
-    ((i++))
-  done
-  if _has_parent_node; then
-    echo "[r] Return to $(_get_parent_node)"
-    tput hpa $_OFFSET
-  fi
-  echo "[q] Quit"
-  trace "${optionstr:2:${#optionstr}}"
+function _has_parent_menu() {
+  return $((1-(menu_strings_i>0)))
 }
-function _read_choice() { # suggestion choice(out)
-  local suggestion="$1"
-  local _choice
-  tput hpa $_OFFSET
-  printf '%s' "Enter choice [$suggestion]: "
-  read -r _choice
-  [[ -z "$_choice" ]] && _choice="$suggestion"
-  eval "$2='$_choice'"
+function _get_parent_menu() {
+  local menu_string
+  peek menu_strings menu_string
+  printf "$menu_string"
 }
-function _get_next_suggestion() {
-  local -i _number=$1
-  if ((number=${#options})); then
-    if _has_parent_node; then
-      echo "r"
-    else
-      echo "q"
-    fi
-  else
-    echo $((number+1))
-  fi
+
+# Format logs
+function m_info() {
+  tput cuf $OFFSET
+  info "$@"
 }
-function _has_parent_node() {
-  return $((1-(menus_i>1)))
+function m_warn() {
+  tput cuf $OFFSET
+  warn "$@"
 }
-function _get_parent_node() {
-  echo "${menus[$(($menus_i-1))]}"
+function m_error() {
+  tput cuf $OFFSET
+  error "$@"
 }
-function _get_menu_string() { # level, title
-  local _level=
+function m_fatal() {
+  tput cuf $OFFSET
+  fatal "$@"
 }
 # Variables
+declare SUGGESTION
 declare_stack suggestions
-declare_stack levels
+declare -a OPTIONS=()
+declare TITLE
 declare_stack titles
-declare -i _LEVEL
-declare _TITLE
-declare -ir _MINOFFSETRUN=2
-declare -ir _MINOFFSETNORMAL=4
-declare -i _OFFSET
-declare _CURRENTNODE
-declare _LASTNODE
-declare _SKIPCHOICE
+declare -i LEVEL
+declare -i NEXTLEVEL
+declare_stack levels
+declare MENU_STRING
+declare_stack menu_strings
+declare -i OFFSET
+declare -ir OFFSET_RUNTHROUGH_MIN=2
+declare -ir OFFSET_NORMAL=4
+declare MENU_DRAWN
+declare SKIPCHOICE
+declare -r CODE="${BG_GRAY}${FG_LGRAY}${BOLD}"
 
-# Start script
-#tput smcup # Not supported in liveISO
-
-enable_tab_completion
-TAB_COMPLETIONS=(
-  mkswap
-  mkfs.btrfs
-  mkfs.fat
-  mkfexfatfs
-  mkfs.f2fs
-  mkfs.hfsplus
-  mkfs.nilfs
-  mkfs.ntfs
-  mkfs.reiser4
-  mkfs.reiserfs
-  mkfs.udf
-  mkfs.xfs
-  mkfs.ext2
-  mkfs.ext3
-  mkfs.ext4
-  mkfs.vfat
-)
-read -ep "$ " answer
-clean_tab_suggestions
-disable_tab_completion
-read -ep "$ " answer
-
-echo "Answer: '$answer'"
-# main
+if [[ -z "$unittest" ]]; then
+  main
+else
+  run_unittests
+fi

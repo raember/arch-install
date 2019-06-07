@@ -25,7 +25,7 @@ ping_address="archlinux.org" # default: "8.8.8.8"
 disk="/dev/sda" # For convenience - irrelevant for script
 function partition_disks() {
   #bash # For manual setup
-  exec_cmd parted -s $disk \
+  parted -s $disk \
     mklabel gpt \
     mkpart primary fat32 1MB 578MB \
     mkpart primary linux-swap 578MB 11.3GB \
@@ -35,17 +35,17 @@ function partition_disks() {
 #### 1.6 Format the partitions
 function format_partitions() {
   #bash # For manual setup
-  exec_cmd mkfs.fat -F32 ${disk}1
-  exec_cmd mkswap ${disk}2
-  exec_cmd swapon ${disk}2
-  exec_cmd mkfs.ext4 ${disk}3
+  mkfs.fat -F32 ${disk}1
+  mkswap ${disk}2
+  swapon ${disk}2
+  mkfs.ext4 ${disk}3
 }
 #### 1.7 Mount the file systems
 function mount_partitions() {
   #bash # For manual setup
-  exec_cmd mount ${disk}3 /mnt
-  exec_cmd mkdir -p /mnt/boot
-  exec_cmd mount ${disk}1 /mnt/boot
+  mount ${disk}3 /mnt
+  mkdir -p /mnt/boot
+  mount ${disk}1 /mnt/boot
 }
 
 ################################################################################
