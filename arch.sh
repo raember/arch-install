@@ -22,6 +22,12 @@ USAGE=(
   '[OPTION]...    Execute script with arguments.'
   '               Show this help page.'
 )
+_help=
+_ver=
+logfile=
+_chroot=
+_post=
+run_through=
 define_opt '_help'       '-h' '--help'         ''     'Display this help text.'
 define_opt '_ver'        '-v' '--version'      ''     'Display the VERSION.'
 define_opt 'logfile'     '-l' '--logfile'      'file' "Change logfile to ${ITALIC}file${RESET}."
@@ -86,7 +92,7 @@ function main() {
       ["5   Post-Installation"]=post_installation
     )
     draw_menu
-    choose_enumerated_option $suggestion
+    choose_enumerated_option ${suggestion}
   done
 }
 
@@ -106,7 +112,7 @@ function pre_installation() {
       ["7   Mount the file systems"]=mount_the_file_systems
     )
     draw_menu
-    choose_enumerated_option $suggestion
+    choose_enumerated_option ${suggestion}
   done
 }
 
@@ -128,7 +134,7 @@ function set_the_keyboard_layout() {
     fi
     newline
     info "Setting keyboard layout to '$keyboard_layout'."
-    exec_cmd loadkeys $keyboard_layout && break
+    exec_cmd loadkeys ${keyboard_layout} && break
     warn "Couldn't set the keyboard layout."
     keyboard_layout=
   done
@@ -157,7 +163,7 @@ function set_the_keyboard_layout() {
     fi
     newline
     info "Setting console font to '$console_font'."
-    exec_cmd setfont $console_font && break
+    exec_cmd setfont ${console_font} && break
     warn "Couldn't set the console font."
     console_font=
   done
@@ -169,7 +175,7 @@ function verify_boot_mode() {
   print_title "1.2 Verifying the boot mode"
   newline
   debug "Checking if efivars exist."
-  if [ -f /sys/firmware/efi/efivars ] ; then
+  if [[ -f /sys/firmware/efi/efivars ]] ; then
     info "UEFI is enabled."
   else
     info "UEFI is disabled."
@@ -185,7 +191,7 @@ function connect_to_the_internet() {
   [[ -z "$ping_address" ]] && ping_address="8.8.8.8"
   while : ; do
     debug "Pinging $ping_address."
-    if exec_cmd ping -c 1 $ping_address; then
+    if exec_cmd ping -c 1 ${ping_address}; then
       newline
       info "Internet is up and running"
       break;
@@ -199,7 +205,7 @@ for ${BOLD}wired${RESET} devices or ${font_bold}Wireless network configuration${
 ${ITALIC}${UNDERLINE}https://wiki.archlinux.org/index.php/Wireless_network_configuration${RESET}
 for ${BOLD}wireless${RESET} devices.
 Then resume this script with ${ITALIC}-r $INDEX${RESET}."
-      exit $EX_OK
+      exit ${EX_OK}
     fi
   done
 }
