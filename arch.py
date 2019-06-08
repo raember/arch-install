@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import logging
+import os.path
 import subprocess
 from typing import List, Tuple, Dict, Any
-import os.path
+
 import settings
 
 logging.basicConfig(
@@ -73,8 +74,8 @@ class Menu:
     def run(self, screen: 'Screen', sys: 'System') -> 'Menu':
         self.log.debug(f"Running {'.'.join(map(str, self.hierarchy))} {self.title}")
         self.visited = True
-        screen.clear()
-        screen.print_title(self)
+        # screen.clear()
+        # screen.print_title(self)
         return self._run(screen, sys)
 
     def _run(self, screen: 'Screen', sys: 'System') -> 'Menu':
@@ -94,9 +95,9 @@ class Menu:
                 choices[str(menu.number)] = menu.to_formatted_str()
                 if recommendation == '' and not menu.visited:
                     recommendation = str(menu.number)
-        choices[Screen.KEY_RETURN] = f"{Format.PRIMARY}r{Format.NOT_IMPORTANT} {Format.RESET}Return"
+        choices[Choice.KEY_RETURN] = f"{Format.PRIMARY}{Choice.KEY_RETURN}{Format.NOT_IMPORTANT} {Format.RESET}Return"
         if recommendation == '':
-            recommendation = Screen.KEY_RETURN
+            recommendation = Choice.KEY_RETURN
         return choices, recommendation
 
     def to_formatted_str(self) -> str:
@@ -166,38 +167,71 @@ class SetKeyboardLayout(Menu):
     title = "Set the keyboard layout"
 
     def _run(self, screen: 'Screen', sys: 'System') -> 'Menu':
+        layout = settings.PreInstallation.KeyboardLayout.Layout
+        font = settings.PreInstallation.KeyboardLayout.ConsoleFont
+        # layout = ''
+        # font = ''
+        set_keyboard = False
+        set_font = False
+        while True:
+            CHOICE_KEYBOARD = 'k'
+            CHOICE_FONT = 'f'
+            default = Choice.KEY_RETURN
+            if not set_font:
+                default = CHOICE_FONT
+            if not set_keyboard:
+                default = CHOICE_KEYBOARD
+            choice = ChoiceWithReturn({
+                CHOICE_KEYBOARD: "Set keyboard layout",
+                CHOICE_FONT: "Set console font",
+            }, default).choose(self, screen)
+            if choice == Choice.KEY_RETURN:
+                return self.parent
+            elif choice == CHOICE_KEYBOARD:
+                set_keyboard = self._set_keyboard_layout(screen, sys)
+            elif choice == CHOICE_FONT:
+                set_font = self._set_console_font(screen, sys)
+
+    def _set_keyboard_layout(self, screen: 'Screen', sys: 'System') -> bool:
         layouts = self.get_keyboard_layouts(sys)
         layout = settings.PreInstallation.KeyboardLayout.Layout
-        # layout = ''
-        while True:
-            if layout == '':
+        CHOICE_LIST = 'l'
+        CHOICE_SET = 's'
+        set_keyboard = False
+        if layout not in layouts:
+            while True:
                 choice = ChoiceWithReturn({
-                    'l': "List available keyboard layouts",
-                    's': "Set keyboard layout"
-                }, 's').choose(self, screen)
-                if choice == 'l':
+                    CHOICE_LIST: "List avaliable fonts",
+                    CHOICE_SET: "Set keyboard layout"
+                }, CHOICE_SET).choose(self, screen)
+                if choice == Choice.KEY_RETURN:
+                    return set_keyboard
+                elif choice == CHOICE_LIST:
                     screen.clear()
                     screen.print_title(self)
                     screen.print(f"{Format.NOT_IMPORTANT}, {Format.RESET}".join(layouts))
+                screen.print("Please select a keyboard layout")
                 layout = screen.read_line('> ')
-            if layout not in layouts:
-                screen.print_error(f"Layout '{layout}' not in available layouts.")
-                layout = ''
-                screen.wait_for_enter()
-                continue
-            p = sys.run(f"loadkeys {layout}")
-            if p.returncode != 0:
-                screen.print_error('Failed to set keyboard layout')
-                screen.wait_for_enter()
-                continue
-            else:
-                screen.print(f"Set keyboard layout to {Format.META}{layout}{Format.RESET}")
-                break
-        screen.wait_for_enter()
-        return self.parent
+                if layout not in layouts:
+                    screen.print_error(f"Layout '{layout}' not in available layouts.")
+                    screen.wait_for_enter()
+                    continue
+                if not self.set_keyboard_layout(sys, layout):
+                    error_msg = f"Failed to set keyboard layout to '{layout}'"
+                    self.log.error(error_msg)
+                    screen.print_error(error_msg)
+                    screen.wait_for_enter()
+                    set_keyboard = False
+                else:
+                    screen.print(f"Set keyboard layout to {Format.META}{layout}{Format.RESET}")
+                    screen.wait_for_enter()
+                    set_keyboard = True
 
-    def get_keyboard_layouts(self, sys: 'System') -> List[str]:
-        out = sys.run("ls /usr/share/kbd/keymaps/**/*.map.gz").stdout.decode('utf-8')
+    @staticmethod
+    def get_keyboard_layouts(sys: 'System') -> List[str]:
+        proc = sys.run("ls /usr/share/kbd/keymaps/**/*.map.gz")
+        proc.check_returncode()
+        out = proc.stdout.decode('utf-8')
         layouts = []
         for path in out.split('\n'):
             filename_map_gz = os.path.basename(path)
@@ -206,13 +240,53 @@ class SetKeyboardLayout(Menu):
             layouts.append(filename)
         return layouts
 
+    @staticmethod
+    def set_keyboard_layout(sys: 'System', layout: str) -> bool:
+        return sys.run(f"loadkeys {layout}").returncode == 0
+
+    def _set_console_font(self, screen: 'Screen', sys: 'System') -> bool:
+        fonts = SetKeyboardLayout.get_console_fonts(sys)
+        font = settings.PreInstallation.KeyboardLayout.ConsoleFont
+        CHOICE_LIST = 'l'
+        CHOICE_SET = 's'
+        CHOICE_TEST = 't'
+
+    @staticmethod
+    def get_console_fonts(sys: 'System') -> List[str]:
+        proc = sys.run("ls /usr/share/kbd/consolefonts/*.gz")
+        proc.check_returncode()
+        out = proc.stdout.decode('utf-8')
+        fonts = []
+        for path in out.split('\n'):
+            fonts.append(os.path.basename(path))
+        return fonts
+
+    @staticmethod
+    def set_console_font(sys: 'System', font: str) -> bool:
+        return sys.run(f"setfont {font}").returncode == 0
+
 
 class VerifyBootMode(Menu):
     title = "Verify the boot mode"
 
+    def _run(self, screen: 'Screen', sys: 'System') -> 'Menu':
+        if VerifyBootMode.isUefi():
+            screen.print(f"System runs in {Format.META}UEFI{Format.RESET} mode")
+        else:
+            screen.print(f"System runs in {Format.META}BIOS/CSM{Format.RESET} mode")
+        screen.wait_for_enter()
+        return self.parent
+
+    @staticmethod
+    def isUefi():
+        return not os.path.isfile('/sys/firmware/efi/efivars')
+
 
 class ConnectToInternet(Menu):
     title = "Connect to the internet"
+
+    def _run(self, screen: 'Screen', sys: 'System') -> 'Menu':
+        pass
 
 
 class UpdateSystemClock(Menu):
@@ -349,6 +423,8 @@ class Choice:
     descriptions_formatted: List[str]
     default: str
 
+    KEY_RETURN = 'r'
+
     def __init__(self, choices: Dict[str, str], default: str):
         self.choices = list(choices.keys())
         self.descriptions = list(choices.values())
@@ -383,7 +459,7 @@ class Choice:
 
 class ChoiceWithReturn(Choice):
     def _format_descriptions(self):
-        self.choices.append(Screen.KEY_RETURN)
+        self.choices.append(Choice.KEY_RETURN)
         self.descriptions.append("Return")
         super()._format_descriptions()
 
@@ -401,16 +477,16 @@ class MenuChoice(ChoiceWithReturn):
                 if default == '' and not menu.visited:
                     default = str(menu.number)
         if default == '':
-            default = Screen.KEY_RETURN
+            default = Choice.KEY_RETURN
         super().__init__(choices, default)
 
     def _format_descriptions(self):
-        self.choices.append(Screen.KEY_RETURN)
+        self.choices.append(Choice.KEY_RETURN)
         self.descriptions.append("Return")
         self.descriptions_formatted = []
         for menu in self.menu.submenus:
             self.descriptions_formatted.append(menu.to_formatted_str())
-        self.descriptions_formatted.append(f"{Format.PRIMARY}{Screen.KEY_RETURN}{Format.RESET} Return")
+        self.descriptions_formatted.append(f"{Format.PRIMARY}{Choice.KEY_RETURN}{Format.RESET} Return")
 
     def choose(self, menu: Menu, screen: 'Screen') -> Menu:
         choice = super().choose(menu, screen)
@@ -420,8 +496,6 @@ class MenuChoice(ChoiceWithReturn):
 
 
 class Screen:
-    KEY_RETURN = 'r'
-
     def clear(self):
         subprocess.run('clear')
 
@@ -448,7 +522,7 @@ class Screen:
         self.print(f"{Format.PRIMARY}r{Format.RESET} Return")
         while True:
             choice = self.choose(menu, choices, default)
-            if choice == self.KEY_RETURN:
+            if choice == Choice.KEY_RETURN:
                 return menu.parent
             index = int(choice) - 1
             if 0 <= index < len(menu.submenus):
@@ -478,7 +552,7 @@ class Screen:
         return choices
 
     def choose_with_return(self, menu: Menu, choices: Dict[str, str], default: str) -> str:
-        choices[Screen.KEY_RETURN] = f"{Format.PRIMARY}r{Format.NOT_IMPORTANT} {Format.RESET}Return"
+        choices[Choice.KEY_RETURN] = f"{Format.PRIMARY}r{Format.NOT_IMPORTANT} {Format.RESET}Return"
         return self.choose(menu, choices, default)
 
     def print_error(self, err: str):
